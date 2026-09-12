@@ -73,6 +73,12 @@ export const IngredientReviewList: React.FC<IngredientReviewListProps> = ({
   };
 
   // Edit token inline
+  const handleToggleEdit = (id: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isEditing: !item.isEditing } : item))
+    );
+  };
+
   const handleStartEdit = (id: string) => {
     setItems((prev) =>
       prev.map((item) =>

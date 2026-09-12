@@ -1,0 +1,361 @@
+{
+  "project": "OLFEXA",
+  "version": "0.1",
+  "purpose": "Starter fragrance ingredient knowledge base for evidence-grounded ingredient analysis.",
+  "ingredients": [
+    {
+      "name": "Amyl cinnamal",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Amylcinnamyl alcohol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Anisyl alcohol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Benzyl alcohol",
+      "category": "Fragrance / preservative / solvent",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Benzyl benzoate",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Benzyl cinnamate",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Benzyl salicylate",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Cinnamyl alcohol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Cinnamaldehyde",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Citral",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Citronellol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Coumarin",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Eugenol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Farnesol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Geraniol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Hexyl cinnamal",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Hydroxycitronellal",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Hydroxyisohexyl 3-cyclohexene carboxaldehyde (HICC/Lyral)",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Isoeugenol",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Lilial",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "d-Limonene",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Linalool",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Methyl 2-octynoate",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "g-Methylionone",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Oak moss extract",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Tree moss extract",
+      "category": "Fragrance",
+      "potential_fragrance_allergen": true,
+      "ethyl_alcohol_or_denatured_alcohol": false,
+      "alcohol_detection_note": "",
+      "status": "Starter record",
+      "notes": "Presence does not by itself mean a product is unsafe; use as an ingredient-level flag."
+    },
+    {
+      "name": "Alcohol",
+      "category": "Ethyl alcohol / ethanol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "Ethanol",
+      "category": "Ethyl alcohol / ethanol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "Alcohol Denat.",
+      "category": "Denatured ethyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "SD Alcohol",
+      "category": "Denatured ethyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "SD Alcohol 23-A",
+      "category": "Denatured ethyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "SD Alcohol 40",
+      "category": "Denatured ethyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "SD Alcohol 40-B",
+      "category": "Denatured ethyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    },
+    {
+      "name": "Isopropyl Alcohol",
+      "category": "Isopropyl alcohol",
+      "potential_fragrance_allergen": false,
+      "ethyl_alcohol_or_denatured_alcohol": true,
+      "alcohol_detection_note": "Flag as ethyl alcohol/denatured alcohol for OLFEXA alcohol-status logic.",
+      "status": "Starter record",
+      "notes": "Do not treat all ingredients containing the word 'alcohol' as ethyl alcohol; fatty alcohols are different."
+    }
+  ],
+  "alcohol_rules": {
+    "version": "0.1",
+    "description": "Rules for OLFEXA alcohol-status detection from declared ingredient text.",
+    "positive_matches": [
+      "alcohol",
+      "ethanol",
+      "alcohol denat.",
+      "alcohol denat",
+      "sd alcohol",
+      "sd alcohol 23-a",
+      "sd alcohol 40",
+      "sd alcohol 40-b",
+      "isopropyl alcohol"
+    ],
+    "logic": [
+      "Match normalized ingredient names against the positive alcohol list.",
+      "Do not classify every ingredient containing the word 'alcohol' as ethyl alcohol.",
+      "If no recognized alcohol ingredient is detected, report 'No alcohol ingredient detected in the provided ingredient information', not an absolute guarantee of alcohol-free status.",
+      "If ingredient information is incomplete or unreadable, report 'Unable to confirm'."
+    ],
+    "statuses": [
+      "CONTAINS_ALCOHOL",
+      "NO_RECOGNIZED_ALCOHOL_DETECTED",
+      "UNABLE_TO_CONFIRM"
+    ]
+  },
+  "sources": [
+    {
+      "organization": "U.S. FDA",
+      "title": "Allergens in Cosmetics",
+      "url": "https://www.fda.gov/cosmetics/cosmetic-ingredients/allergens-cosmetics"
+    },
+    {
+      "organization": "U.S. FDA",
+      "title": "\"Alcohol Free\" Cosmetics",
+      "url": "https://www.fda.gov/cosmetics/cosmetics-labeling-claims/alcohol-free"
+    },
+    {
+      "organization": "European Commission",
+      "title": "CosIng – Cosmetic ingredient database",
+      "url": "https://single-market-economy.ec.europa.eu/sectors/cosmetics/cosmetic-ingredient-database_en"
+    },
+    {
+      "organization": "IFRA",
+      "title": "IFRA Standards Library",
+      "url": "https://ifrafragrance.org/standards-library"
+    }
+  ]
+}

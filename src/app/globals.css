@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DAY THEME AS PRIMARY DEFAULT */
+:root {
+  --background: #fdfdfc;
+  --foreground: #0f172a;
+  --card-bg: #ffffff;
+  --border-subtle: rgba(15, 23, 42, 0.09);
+  --border-focus: rgba(5, 150, 105, 0.4);
+  color-scheme: light;
+}
+
+/* Optional dark theme only when explicitly activated via .dark class */
+.dark {
+  --background: #080c12;
+  --foreground: #f8fafc;
+  --card-bg: #0e141e;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(16, 185, 129, 0.5);
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Editorial typography styling */
+.font-editorial-heading {
+  font-family: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.mono-tag {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Luminous Day Theme Hero Glow */
+.hero-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(5, 150, 105, 0.06) 0%, rgba(253, 253, 252, 0) 70%);
+}
+
+.dark .hero-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, rgba(8, 12, 18, 0) 70%);
+}
+
+/* Micro-borders and card elevation */
+.card-premium {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-premium:hover {
+  border-color: rgba(5, 150, 105, 0.35);
+  box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.07);
+  transform: translateY(-1px);
+}
+
+/* Custom discreet scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}

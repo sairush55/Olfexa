@@ -13,7 +13,7 @@ export default function ScanPage() {
           Scan Fragrance Label
         </h1>
         <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-          Upload an image of the physical cosmetic packaging ingredient list, take a photo with your camera, or enter ingredients manually.
+          Upload an image of cosmetic packaging, paste a product link, or enter ingredients manually.
         </p>
       </div>
 

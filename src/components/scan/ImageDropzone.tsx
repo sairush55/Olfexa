@@ -17,7 +17,10 @@ import {
   EyeOff, 
   Check, 
   X,
-  ScanLine
+  ScanLine,
+  Link2,
+  Globe,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { preprocessImageForOcr, runBrowserOcr } from "@/lib/clientOcr";
@@ -92,7 +95,7 @@ export const ImageDropzone: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"upload" | "manual">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "link" | "manual">("upload");
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,6 +113,31 @@ export const ImageDropzone: React.FC = () => {
   const [manualText, setManualText] = useState("");
   const [perfumeName, setPerfumeName] = useState("");
   const [brandName, setBrandName] = useState("");
+
+  // Product Link mode
+  const [productUrl, setProductUrl] = useState("");
+  const [isLinkAnalyzing, setIsLinkAnalyzing] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkNotice, setLinkNotice] = useState<string | null>(null);
+  const [linkLoadingStep, setLinkLoadingStep] = useState<string>("Fetching product page…");
+
+  useEffect(() => {
+    if (!isLinkAnalyzing) {
+      setLinkLoadingStep("Fetching product page…");
+      return;
+    }
+    const timer1 = setTimeout(() => {
+      setLinkLoadingStep("Locating ingredient information…");
+    }, 1200);
+    const timer2 = setTimeout(() => {
+      setLinkLoadingStep("Normalizing ingredients…");
+    }, 2500);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isLinkAnalyzing]);
 
   // Processing state & 5-step stepper
   const [isProcessing, setIsProcessing] = useState(false);
@@ -244,6 +272,115 @@ export const ImageDropzone: React.FC = () => {
       sessionStorage.setItem("olfexa_review_brand", preset.brand);
     }
     router.push("/scan/review");
+  };
+
+  // Product Link Analysis Execution
+  const handleAnalyzeProductLink = async () => {
+    const trimmed = productUrl.trim();
+    if (!trimmed) {
+      setLinkError("Please enter a valid product page URL.");
+      return;
+    }
+
+    setLinkError(null);
+    setLinkNotice(null);
+    setIsLinkAnalyzing(true);
+
+    try {
+      const res = await fetch("/api/product-link/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+
+      const result = await res.json();
+
+      if (!result.success || !result.data) {
+        setLinkError(result.message || result.error || "Unable to extract information from this product link.");
+        setIsLinkAnalyzing(false);
+        return;
+      }
+
+      const productData = result.data;
+      const detectedIngredients: string[] = productData.ingredients || [];
+
+      // Update perfume / brand name fields if extracted
+      if (productData.productName && !perfumeName) {
+        setPerfumeName(productData.productName);
+      }
+      if (productData.brand && !brandName) {
+        setBrandName(productData.brand);
+      }
+
+      if (!result.hasIngredients || detectedIngredients.length === 0) {
+        setLinkNotice(
+          "Product information was identified, but no INCI cosmetic ingredient list could be found on this webpage. Retailers often display marketing olfactory notes (top/heart/base) rather than the regulatory chemical ingredients printed on the packaging box."
+        );
+        setIsLinkAnalyzing(false);
+        return;
+      }
+
+      // Ingredients found: populate session and navigate to review checkpoint
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("olfexa_review_ingredients", JSON.stringify(detectedIngredients));
+        sessionStorage.setItem(
+          "olfexa_review_ingredients_detailed",
+          JSON.stringify(
+            detectedIngredients.map((name: string) => ({
+              name,
+              confidence: 0.98,
+              needsReview: false,
+              rawDetected: name,
+            }))
+          )
+        );
+        sessionStorage.setItem(
+          "olfexa_review_raw_text",
+          productData.ingredientsText || detectedIngredients.join(", ")
+        );
+        sessionStorage.setItem(
+          "olfexa_review_perfume",
+          productData.productName || perfumeName || "Online Fragrance"
+        );
+        sessionStorage.setItem(
+          "olfexa_review_brand",
+          productData.brand || brandName || "Declared Brand"
+        );
+        if (productData.imageUrl) {
+          sessionStorage.setItem("olfexa_review_image", productData.imageUrl);
+        }
+        sessionStorage.setItem(
+          "olfexa_review_provenance",
+          JSON.stringify({
+            isPerfume: true,
+            fragranceType: productData.concentration || productData.productType || "Fragrance",
+            confidence: productData.extractionConfidence || 0.96,
+            detectionReason: "Extracted via verified product page with INCI ingredient declaration.",
+            manufacturingInfo: {
+              brandName: productData.brand,
+              sourceUrl: trimmed,
+            },
+            companyDetails: {
+              brandName: productData.brand,
+            },
+            companyAddress: {},
+            others: {
+              fragranceType: productData.concentration || productData.productType || "Fragrance",
+              volume: productData.size,
+              notes: productData.fragranceNotes,
+              claims: productData.claims,
+            },
+          })
+        );
+      }
+
+      router.push("/scan/review");
+    } catch (err: any) {
+      console.error("Product link analysis error:", err);
+      setLinkError(err.message || "Failed to analyze product link. Please check your internet connection.");
+    } finally {
+      setIsLinkAnalyzing(false);
+    }
   };
 
   // Main Scan Execution with 5-Step Progress Stepper
@@ -483,6 +620,8 @@ export const ImageDropzone: React.FC = () => {
             onClick={() => {
               setActiveTab("upload");
               setScanErrorMessage(null);
+              setLinkError(null);
+              setLinkNotice(null);
             }}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
@@ -497,9 +636,30 @@ export const ImageDropzone: React.FC = () => {
           <button
             type="button"
             onClick={() => {
+              setActiveTab("link");
+              stopCamera();
+              setScanErrorMessage(null);
+              setLinkError(null);
+              setLinkNotice(null);
+            }}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
+              activeTab === "link"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            )}
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            <span>Paste Product Link</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab("manual");
               stopCamera();
               setScanErrorMessage(null);
+              setLinkError(null);
+              setLinkNotice(null);
             }}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
@@ -926,6 +1086,199 @@ export const ImageDropzone: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      ) : activeTab === "link" ? (
+        /* Product Link Input View */
+        <div className="max-w-xl mx-auto space-y-4">
+          <div className="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-editorial-heading">
+                  Product Link Intelligence
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Analyze perfume or attar ingredients directly from brand or retailer pages
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">
+                Product URL
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  value={productUrl}
+                  onChange={(e) => {
+                    setProductUrl(e.target.value);
+                    if (linkError) setLinkError(null);
+                    if (linkNotice) setLinkNotice(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isLinkAnalyzing && productUrl.trim()) {
+                      handleAnalyzeProductLink();
+                    }
+                  }}
+                  disabled={isLinkAnalyzing}
+                  placeholder="Paste a perfume or attar product link"
+                  className="w-full text-xs font-mono pl-3.5 pr-8 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-foreground focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all"
+                />
+                {productUrl && !isLinkAnalyzing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductUrl("");
+                      setLinkError(null);
+                      setLinkNotice(null);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-mono">
+                e.g. https://example.com/product/perfume-name
+              </p>
+            </div>
+
+            {/* Link Error Banner */}
+            {linkError && (
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-900 dark:text-rose-200 space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1 flex-1">
+                    <span className="font-semibold block">Link Extraction Notice</span>
+                    <p className="text-[11px] leading-relaxed text-rose-800 dark:text-rose-300">
+                      {linkError}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("manual");
+                      setLinkError(null);
+                      setLinkNotice(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    ✍️ Enter Ingredients Manually
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("upload");
+                      setLinkError(null);
+                      setLinkNotice(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold transition-colors"
+                  >
+                    📸 Scan Packaging Photo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Link Notice (e.g. Product identified but no INCI list) */}
+            {linkNotice && (
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-900/60 text-xs text-amber-950 dark:text-amber-200 space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1 flex-1">
+                    <span className="font-semibold block">No Ingredient List Found</span>
+                    <p className="text-[11px] leading-relaxed text-amber-900/90 dark:text-amber-200 font-medium">
+                      No ingredient list found on this product page. You can enter the ingredients manually or upload an image of the packaging.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("manual");
+                      setLinkError(null);
+                      setLinkNotice(null);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold transition-colors shadow-2xs"
+                  >
+                    ✍️ Enter Ingredients Manually
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("upload");
+                      setLinkError(null);
+                      setLinkNotice(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    📸 Scan Packaging Box
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Stepper Indicator */}
+            {isLinkAnalyzing && (
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin shrink-0" />
+                    <span>{linkLoadingStep}</span>
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-emerald-600 animate-pulse w-3/4 rounded-full" />
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>1. Fetch page</span>
+                  <span>2. Locate INCI</span>
+                  <span>3. Normalize</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <span className="text-[11px] text-slate-400 font-mono">
+                Extracts INCI declarations only. Olfactory notes are kept distinct.
+              </span>
+
+              <button
+                type="button"
+                disabled={!productUrl.trim() || isLinkAnalyzing}
+                onClick={handleAnalyzeProductLink}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 text-white text-xs font-semibold tracking-wider uppercase transition-all shadow-sm"
+              >
+                {isLinkAnalyzing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Analyze Product</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/80 flex items-start gap-2.5 text-[11px] text-slate-600 dark:text-slate-400">
+            <span className="text-base">ℹ️</span>
+            <div className="space-y-1">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">How Product Link Intelligence Works:</span>
+              <p className="leading-relaxed">
+                OLFEXA fetches the public HTML, parses Schema.org JSON-LD and OpenGraph metadata, isolates declared cosmetic ingredient listings, and cross-references them against the OLFEXA scientific toxicology database. Fragrance marketing notes (e.g. Bergamot, Oud) are kept separate from scientific INCI ingredients.
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         /* Manual Input View */

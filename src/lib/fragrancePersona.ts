@@ -1,4 +1,13 @@
 import { FragrancePersona } from "@/types";
+import { 
+  matchZodiacAttar, 
+  zodiacRecommendations, 
+  CANONICAL_FAMILIES, 
+  CANONICAL_FAMILY_LABELS,
+  ZODIAC_ENTERTAINMENT_DISCLAIMER 
+} from "./zodiacAttarData";
+
+export * from "./zodiacAttarData";
 
 export const ZODIAC_PROFILES: Record<string, {
   element: "Fire" | "Earth" | "Air" | "Water";
@@ -120,24 +129,42 @@ export const ZODIAC_PROFILES: Record<string, {
 };
 
 /**
- * Generates an entertainment/discovery fragrance persona.
+ * Generates an entertainment/discovery fragrance persona and attar recommendation.
+ * Uses the deterministic zodiacAttarData engine.
  * Explicitly disclaimed from safety, allergen risk, or medical suitability.
  */
 export function generateFragrancePersona(
   zodiacSign?: string,
+  userFamily?: string | null,
   intensity?: FragrancePersona["intensityPreference"]
 ): FragrancePersona {
-  const sign = zodiacSign && ZODIAC_PROFILES[zodiacSign] ? zodiacSign : "Leo";
-  const profile = ZODIAC_PROFILES[sign];
+  const match = matchZodiacAttar(zodiacSign, userFamily);
+  const sign = match.signCapitalized;
+
+  const intensityMap: Record<string, FragrancePersona["intensityPreference"]> = {
+    Strong: "intense",
+    Moderate: "moderate",
+    Soft: "subtle"
+  };
 
   return {
     zodiacSign: sign,
-    scentFamilies: profile.families,
-    vibe: profile.vibe,
-    intensityPreference: intensity || profile.intensity,
-    suggestedOccasions: profile.occasions,
-    attarRecommendation: profile.attar,
-    perfumeRecommendation: profile.perfume,
-    disclaimer: "Zodiac-inspired fragrance profile (for fragrance discovery & entertainment only — does not determine safety, chemical risk, or scientific suitability)."
+    symbol: match.symbol,
+    dateRange: match.dateRange,
+    personaTraits: match.persona,
+    description: match.description,
+    scentFamilies: match.primaryFamilies,
+    secondaryFamilies: match.secondaryFamilies,
+    vibe: match.persona.join(" • "),
+    intensityPreference: intensity || intensityMap[match.recommendation.intensity] || "moderate",
+    attarIntensity: match.recommendation.intensity,
+    suggestedOccasions: match.recommendation.occasions,
+    attarRecommendation: match.recommendation.name,
+    attarProfile: match.recommendation.profile,
+    attarDescription: match.recommendation.description,
+    selectedFamily: match.selectedFamily,
+    isFallback: match.isFallback,
+    fallbackMessage: match.fallbackMessage,
+    disclaimer: ZODIAC_ENTERTAINMENT_DISCLAIMER
   };
 }

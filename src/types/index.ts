@@ -344,12 +344,23 @@ export interface SuitabilityProfile {
 
 export interface FragrancePersona {
   zodiacSign?: string;
+  symbol?: string;
+  dateRange?: string;
+  personaTraits?: string[];
+  description?: string;
   scentFamilies: string[];
+  secondaryFamilies?: string[];
   vibe: string;
   intensityPreference: "subtle" | "moderate" | "projective" | "intense";
+  attarIntensity?: "Soft" | "Moderate" | "Strong";
   suggestedOccasions: string[];
   attarRecommendation?: string;
+  attarProfile?: string[];
+  attarDescription?: string;
   perfumeRecommendation?: string;
+  selectedFamily?: string | null;
+  isFallback?: boolean;
+  fallbackMessage?: string;
   disclaimer: string;
 }
 

@@ -35,33 +35,17 @@ const DEFAULT_REVIEW_INGREDIENTS = [
   "ETHYLHEXYL METHOXYCINNAMATE"
 ];
 
-const DEFAULT_PROVENANCE: PackagingProvenance = {
+const EMPTY_PROVENANCE: PackagingProvenance = {
   isPerfume: true,
-  fragranceType: "Eau de Parfum",
-  confidence: 0.94,
-  detectionReason: "Identified Eau de Parfum concentration markings and cosmetic INCI standards.",
-  manufacturingInfo: {
-    dateOfManufacture: "2024-05",
-    batchCode: "LOT-8921A",
-    periodAfterOpening: "36M",
-    expiryDate: "2028-05"
-  },
-  companyDetails: {
-    brandName: "Maison de L'Arôme",
-    manufacturer: "Parfums de France S.A.",
-    distributor: "L'Arôme International"
-  },
-  companyAddress: {
-    countryOfOrigin: "France",
-    fullAddress: "33 Avenue Hoche, 75008 Paris, France",
-    responsiblePersonEU: "Cosmetic Regulatory Services EU"
-  },
+  fragranceType: "Cosmetic Formulation",
+  confidence: 0.85,
+  detectionReason: "Packaging label inspection.",
+  manufacturingInfo: {},
+  companyDetails: {},
+  companyAddress: {},
   others: {
-    fragranceType: "Eau de Parfum",
-    volume: "100 ml / 3.4 FL. OZ.",
-    alcoholVol: "80% VOL.",
-    safetyWarnings: ["Flammable: Keep away from open flame", "For external use only"],
-    barcodeRef: "3145891255301"
+    fragranceType: "Cosmetic Formulation",
+    safetyWarnings: [],
   }
 };
 
@@ -70,9 +54,9 @@ export default function ReviewPage() {
   const [detailedIngredients, setDetailedIngredients] = useState<ExtractedOcrIngredient[] | undefined>(undefined);
   const [rawOcrText, setRawOcrText] = useState<string | undefined>(undefined);
   const [perfumeName, setPerfumeName] = useState("Scanned Fragrance");
-  const [brandName, setBrandName] = useState("Declared Brand");
+  const [brandName, setBrandName] = useState("");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
-  const [provenance, setProvenance] = useState<PackagingProvenance>(DEFAULT_PROVENANCE);
+  const [provenance, setProvenance] = useState<PackagingProvenance>(EMPTY_PROVENANCE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -115,14 +99,22 @@ export default function ReviewPage() {
       if (storedProv) {
         try {
           const parsedProv = JSON.parse(storedProv);
-          setProvenance((prev) => ({
-            ...prev,
-            ...parsedProv,
-            manufacturingInfo: { ...prev.manufacturingInfo, ...(parsedProv.manufacturingInfo || {}) },
-            companyDetails: { ...prev.companyDetails, ...(parsedProv.companyDetails || {}) },
-            companyAddress: { ...prev.companyAddress, ...(parsedProv.companyAddress || {}) },
-            others: { ...prev.others, ...(parsedProv.others || {}) },
-          }));
+          setProvenance({
+            isPerfume: parsedProv.isPerfume ?? true,
+            fragranceType: parsedProv.fragranceType || "Cosmetic Formulation",
+            confidence: parsedProv.confidence || 0.85,
+            detectionReason: parsedProv.detectionReason || "",
+            imageQuality: parsedProv.imageQuality,
+            relevance: parsedProv.relevance,
+            manufacturingInfo: parsedProv.manufacturingInfo || {},
+            companyDetails: parsedProv.companyDetails || {},
+            companyAddress: parsedProv.companyAddress || {},
+            others: parsedProv.others || {
+              fragranceType: parsedProv.fragranceType || "Cosmetic Formulation",
+              safetyWarnings: [],
+            },
+            categorized: parsedProv.categorized,
+          });
         } catch {
           // fallback
         }
@@ -275,7 +267,11 @@ export default function ReviewPage() {
             <span>2. Manufacturing (MFG)</span>
           </div>
           <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
-            {provenance.manufacturingInfo.batchCode ? `Batch ${provenance.manufacturingInfo.batchCode}` : provenance.manufacturingInfo.dateOfManufacture || "Detected"}
+            {provenance.manufacturingInfo?.batchCode 
+              ? `Batch ${provenance.manufacturingInfo.batchCode}` 
+              : provenance.manufacturingInfo?.dateOfManufacture 
+              ? `DOM ${provenance.manufacturingInfo.dateOfManufacture}` 
+              : "Not on label"}
           </span>
         </div>
 
@@ -285,7 +281,10 @@ export default function ReviewPage() {
             <span>3. Manufacturer (MFG By)</span>
           </div>
           <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
-            {provenance.companyDetails.manufacturer || provenance.companyDetails.brandName || provenance.companyAddress.countryOfOrigin || "Detected"}
+            {provenance.companyDetails?.brandName || 
+             provenance.companyDetails?.manufacturer || 
+             provenance.companyAddress?.countryOfOrigin || 
+             "Not on label"}
           </span>
         </div>
 
@@ -295,7 +294,10 @@ export default function ReviewPage() {
             <span>4. Other Specs</span>
           </div>
           <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
-            {provenance.others?.volume || provenance.others?.alcoholVol || provenance.fragranceType || "Detected"}
+            {provenance.others?.volume || 
+             provenance.others?.alcoholVol || 
+             (provenance.others?.fragranceType && provenance.others.fragranceType !== "Cosmetic Formulation" ? provenance.others.fragranceType : undefined) || 
+             "Not on label"}
           </span>
         </div>
       </div>
@@ -310,11 +312,13 @@ export default function ReviewPage() {
                 Source Label
               </span>
               <h2 className="text-lg font-bold font-editorial-heading text-slate-900 dark:text-slate-100">
-                {perfumeName}
+                {perfumeName || "Packaging Label"}
               </h2>
-              <p className="text-xs text-slate-500 font-mono">
-                {brandName}
-              </p>
+              {brandName && (
+                <p className="text-xs text-slate-500 font-mono">
+                  {brandName}
+                </p>
+              )}
             </div>
 
             {imageUrl ? (
@@ -336,75 +340,114 @@ export default function ReviewPage() {
 
           {/* Category 2: Extracted Date of Manufacture & Batch Code (MFG) */}
           <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                2. Manufacturing (MFG)
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  2. Manufacturing (MFG)
+                </span>
+              </div>
+              {(provenance.manufacturingInfo?.batchCode || provenance.manufacturingInfo?.dateOfManufacture) ? (
+                <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+                  ✓ Detected
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-slate-400">
+                  Optional
+                </span>
+              )}
             </div>
 
             <div className="space-y-2 text-xs">
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Date of Manufacture (DOM)
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Date of Manufacture (DOM)
+                  </label>
+                  {provenance.manufacturingInfo?.dateOfManufacture && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.manufacturingInfo.dateOfManufacture || ""}
+                  value={provenance.manufacturingInfo?.dateOfManufacture || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     manufacturingInfo: { ...prev.manufacturingInfo, dateOfManufacture: e.target.value }
                   }))}
-                  placeholder="e.g. 2024-05"
+                  placeholder="Not detected on label (e.g. 2024-05)"
                   className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                    Batch / Lot Code
-                  </label>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="block text-[10px] font-mono uppercase text-slate-400">
+                      Batch / Lot Code
+                    </label>
+                    {provenance.manufacturingInfo?.batchCode && (
+                      <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Extracted
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
-                    value={provenance.manufacturingInfo.batchCode || ""}
+                    value={provenance.manufacturingInfo?.batchCode || ""}
                     onChange={(e) => setProvenance((prev) => ({
                       ...prev,
                       manufacturingInfo: { ...prev.manufacturingInfo, batchCode: e.target.value }
                     }))}
-                    placeholder="e.g. 8921A"
+                    placeholder="Not detected on label"
                     className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                    PAO (Period After Opening)
-                  </label>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="block text-[10px] font-mono uppercase text-slate-400">
+                      PAO (Period After Opening)
+                    </label>
+                    {provenance.manufacturingInfo?.periodAfterOpening && (
+                      <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Extracted
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
-                    value={provenance.manufacturingInfo.periodAfterOpening || ""}
+                    value={provenance.manufacturingInfo?.periodAfterOpening || ""}
                     onChange={(e) => setProvenance((prev) => ({
                       ...prev,
                       manufacturingInfo: { ...prev.manufacturingInfo, periodAfterOpening: e.target.value }
                     }))}
-                    placeholder="e.g. 36M"
+                    placeholder="Not detected on label (e.g. 36M)"
                     className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Expiry Date / Best Before
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Expiry Date / Best Before
+                  </label>
+                  {provenance.manufacturingInfo?.expiryDate && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.manufacturingInfo.expiryDate || ""}
+                  value={provenance.manufacturingInfo?.expiryDate || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     manufacturingInfo: { ...prev.manufacturingInfo, expiryDate: e.target.value }
                   }))}
-                  placeholder="e.g. 2028-05"
+                  placeholder="Not detected on label (e.g. 2028-05)"
                   className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
@@ -413,106 +456,159 @@ export default function ReviewPage() {
 
           {/* Category 3: Extracted Company Details & Address (MFG BY) */}
           <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                3. Manufacturer (MFG By)
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  3. Manufacturer (MFG By)
+                </span>
+              </div>
+              {(provenance.companyDetails?.brandName || provenance.companyDetails?.manufacturer || provenance.companyAddress?.countryOfOrigin) ? (
+                <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+                  ✓ Detected
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-slate-400">
+                  Optional
+                </span>
+              )}
             </div>
 
             <div className="space-y-2 text-xs">
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Brand House / Label
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Brand House / Label
+                  </label>
+                  {provenance.companyDetails?.brandName && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyDetails.brandName || brandName || ""}
+                  value={provenance.companyDetails?.brandName || (brandName && brandName !== "Declared Brand" ? brandName : "")}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyDetails: { ...prev.companyDetails, brandName: e.target.value }
                   }))}
-                  placeholder="e.g. Maison de L'Arôme"
+                  placeholder="Not detected on label (e.g. Brand / House)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Manufacturer / Formulator
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Manufacturer / Formulator
+                  </label>
+                  {provenance.companyDetails?.manufacturer && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyDetails.manufacturer || ""}
+                  value={provenance.companyDetails?.manufacturer || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyDetails: { ...prev.companyDetails, manufacturer: e.target.value }
                   }))}
-                  placeholder="e.g. Parfums de France S.A."
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Distributor
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Distributor
+                  </label>
+                  {provenance.companyDetails?.distributor && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyDetails.distributor || ""}
+                  value={provenance.companyDetails?.distributor || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyDetails: { ...prev.companyDetails, distributor: e.target.value }
                   }))}
-                  placeholder="e.g. L'Arôme International"
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Country of Origin
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Country of Origin
+                  </label>
+                  {provenance.companyAddress?.countryOfOrigin && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyAddress.countryOfOrigin || ""}
+                  value={provenance.companyAddress?.countryOfOrigin || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyAddress: { ...prev.companyAddress, countryOfOrigin: e.target.value }
                   }))}
-                  placeholder="e.g. France"
+                  placeholder="Not detected on label (e.g. France, UAE, USA)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Corporate / Registered Address
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Corporate / Registered Address
+                  </label>
+                  {provenance.companyAddress?.fullAddress && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyAddress.fullAddress || ""}
+                  value={provenance.companyAddress?.fullAddress || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyAddress: { ...prev.companyAddress, fullAddress: e.target.value }
                   }))}
-                  placeholder="e.g. 33 Avenue Hoche, 75008 Paris"
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  EU Responsible Person (RP)
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    EU Responsible Person (RP)
+                  </label>
+                  {provenance.companyAddress?.responsiblePersonEU && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={provenance.companyAddress.responsiblePersonEU || ""}
+                  value={provenance.companyAddress?.responsiblePersonEU || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyAddress: { ...prev.companyAddress, responsiblePersonEU: e.target.value }
                   }))}
-                  placeholder="e.g. Cosmetic Regulatory Services EU"
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
@@ -521,19 +617,37 @@ export default function ReviewPage() {
 
           {/* Category 4: Other Packaging Specs (Others) */}
           <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
-            <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                4. Other Packaging Specs
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                  4. Other Packaging Specs
+                </span>
+              </div>
+              {(provenance.others?.volume || provenance.others?.alcoholVol || provenance.others?.barcodeRef) ? (
+                <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+                  ✓ Detected
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-slate-400">
+                  Optional
+                </span>
+              )}
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                    Net Volume
-                  </label>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="block text-[10px] font-mono uppercase text-slate-400">
+                      Net Volume
+                    </label>
+                    {provenance.others?.volume && (
+                      <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Extracted
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={provenance.others?.volume || ""}
@@ -541,15 +655,22 @@ export default function ReviewPage() {
                       ...prev,
                       others: { ...prev.others, volume: e.target.value }
                     }))}
-                    placeholder="e.g. 100 ml / 3.4 FL. OZ."
+                    placeholder="Not detected (e.g. 100 ml / 6 ml)"
                     className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                    Alcohol % by Vol
-                  </label>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="block text-[10px] font-mono uppercase text-slate-400">
+                      Alcohol % by Vol
+                    </label>
+                    {provenance.others?.alcoholVol && (
+                      <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Extracted
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={provenance.others?.alcoholVol || ""}
@@ -557,16 +678,23 @@ export default function ReviewPage() {
                       ...prev,
                       others: { ...prev.others, alcoholVol: e.target.value }
                     }))}
-                    placeholder="e.g. 80% VOL."
+                    placeholder="Not detected (e.g. 80% VOL.)"
                     className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Concentration / Fragrance Type
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Concentration / Fragrance Type
+                  </label>
+                  {provenance.fragranceType && provenance.fragranceType !== "Cosmetic Formulation" && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={provenance.others?.fragranceType || provenance.fragranceType || ""}
@@ -578,15 +706,22 @@ export default function ReviewPage() {
                       others: { ...prev.others, fragranceType: val }
                     }));
                   }}
-                  placeholder="e.g. Eau de Parfum"
+                  placeholder="Not detected (e.g. Eau de Parfum)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Safety / Flammability Warnings
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Safety / Flammability Warnings
+                  </label>
+                  {provenance.others?.safetyWarnings && provenance.others.safetyWarnings.length > 0 && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={provenance.others?.safetyWarnings?.join(", ") || ""}
@@ -597,15 +732,22 @@ export default function ReviewPage() {
                       others: { ...prev.others, safetyWarnings: warnings }
                     }));
                   }}
-                  placeholder="e.g. Flammable, For external use only"
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Barcode / Art Ref
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[10px] font-mono uppercase text-slate-400">
+                    Barcode / Art Ref
+                  </label>
+                  {provenance.others?.barcodeRef && (
+                    <span className="text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Extracted
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={provenance.others?.barcodeRef || ""}
@@ -613,7 +755,7 @@ export default function ReviewPage() {
                     ...prev,
                     others: { ...prev.others, barcodeRef: e.target.value }
                   }))}
-                  placeholder="e.g. 3145891255301"
+                  placeholder="Not detected on label (optional)"
                   className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>

@@ -273,15 +273,13 @@ export async function runBrowserOcr(
       return { rawText, confidence };
     })();
 
-    // 25-second safety timeout
+    // 10-second safety timeout before delegating to server OCR
     const timeoutPromise = new Promise<{ rawText: string; confidence: number }>((_, reject) => {
       setTimeout(() => {
         reject(
-          new Error(
-            "OCR engine timed out. The image may be too low-contrast or fine-print. Please capture closer or use Enter Manually."
-          )
+          new Error("Client OCR timed out. Delegating to server optical engine.")
         );
-      }, 25000);
+      }, 10000);
     });
 
     return await Promise.race([ocrPromise, timeoutPromise]);

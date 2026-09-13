@@ -480,29 +480,36 @@ export const ImageDropzone: React.FC = () => {
           setProgressPercent(40);
 
           // Run in-browser WebAssembly OCR with real-time progress callbacks
-          let ocrResult = await runBrowserOcr(activeBlob, (step, percent) => {
-            setProgressStep(step);
-            setProgressPercent(Math.min(percent, 75));
-          });
+          let ocrResult: { rawText: string; confidence: number } | null = null;
+          try {
+            ocrResult = await runBrowserOcr(activeBlob, (step, percent) => {
+              setProgressStep(step);
+              setProgressPercent(Math.min(percent, 65));
+            });
 
-          // Adaptive Optical Pass 2: If pass 1 produced sparse text or low confidence, automatically try the opposite polarity
-          if ((!ocrResult.rawText || ocrResult.rawText.trim().length < 35 || ocrResult.confidence < 0.6) && selectedFile) {
-            setProgressStep("Refining optical focus for fine cosmetic print...");
-            try {
-              const pass2 = await preprocessImageForOcr(selectedFile, {
-                forceInvert: !opticalStatus?.isInverted,
-                enableSharpening: true,
-              });
-              const pass2Result = await runBrowserOcr(pass2.blob);
-              if (pass2Result.rawText.length > ocrResult.rawText.length || pass2Result.confidence > ocrResult.confidence) {
-                ocrResult = pass2Result;
+            // Adaptive Optical Pass 2: If pass 1 produced sparse text or low confidence, automatically try the opposite polarity
+            if ((!ocrResult.rawText || ocrResult.rawText.trim().length < 35 || ocrResult.confidence < 0.6) && selectedFile) {
+              setProgressStep("Refining optical focus for fine cosmetic print...");
+              try {
+                const pass2 = await preprocessImageForOcr(selectedFile, {
+                  forceInvert: !opticalStatus?.isInverted,
+                  enableSharpening: true,
+                });
+                const pass2Result = await runBrowserOcr(pass2.blob);
+                if (pass2Result.rawText.length > ocrResult.rawText.length || pass2Result.confidence > ocrResult.confidence) {
+                  ocrResult = pass2Result;
+                }
+              } catch {
+                // keep pass 1 result
               }
-            } catch {
-              // keep pass 1 result
             }
+          } catch (clientOcrErr) {
+            console.warn("Client optical recognition bypassed, delegating to server optical engine:", clientOcrErr);
+            setProgressStep("Routing packaging image to server optical engine...");
+            setProgressPercent(50);
           }
 
-          rawOcrText = ocrResult.rawText;
+          rawOcrText = ocrResult?.rawText || "";
 
           setCurrentStepIndex(4);
           setProgressStep("Reading ingredients & harmonizing with INCI dataset...");
@@ -511,8 +518,10 @@ export const ImageDropzone: React.FC = () => {
           // Send FormData to serverless validation pipeline
           const formData = new FormData();
           formData.append("image", activeBlob);
-          formData.append("rawText", ocrResult.rawText);
-          formData.append("confidence", ocrResult.confidence.toString());
+          if (ocrResult?.rawText && ocrResult.rawText.trim().length > 0) {
+            formData.append("rawText", ocrResult.rawText);
+            formData.append("confidence", ocrResult.confidence.toString());
+          }
 
           const res = await fetch("/api/scan/ocr", {
             method: "POST",

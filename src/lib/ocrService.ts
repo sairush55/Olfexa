@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { createWorker } from "tesseract.js";
 import { OLFEXA_DATASET } from "@/data/olfexaDataset";
 import { 
@@ -604,10 +605,10 @@ export async function processImageOcr(
 
   let worker: any = null;
   try {
-    const workerPath = path.join(process.cwd(), "node_modules", "tesseract.js", "src", "worker-script", "node", "index.js");
-    
+    const tmpDir = process.env.VERCEL ? "/tmp" : os.tmpdir();
     worker = await createWorker("eng", 1, {
-      workerPath: fs.existsSync(workerPath) ? workerPath : undefined,
+      cachePath: tmpDir,
+      cacheMethod: "write",
     });
 
     const result = await worker.recognize(imageBuffer);

@@ -102,8 +102,8 @@ export async function preprocessImageForOcr(
         const meanLum = totalLumSum / totalPixels;
 
         // Auto-detect dark packaging (e.g. black or dark navy box with white/gold text)
-        // If mean luminance < 112 or explicitly requested, invert polarity
-        if (options.forceInvert || meanLum < 112) {
+        // Only invert if explicitly requested or if packaging is genuinely deep black (mean luminance < 45)
+        if (options.forceInvert || meanLum < 45) {
           isInverted = true;
         }
 

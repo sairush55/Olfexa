@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
       const pipelineResult = evaluateVisionOcrPipeline(rawText, confidence, imageInput || undefined);
       const isAccepted = pipelineResult.status === "READY_FOR_REVIEW" || 
                          pipelineResult.status === "READY_FOR_ANALYSIS" ||
-                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0);
+                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0) ||
+                         (pipelineResult.ingredients.length > 0);
 
       return NextResponse.json({
         success: isAccepted,
@@ -98,7 +99,8 @@ export async function POST(req: NextRequest) {
 
       const isAccepted = pipelineResult.status === "READY_FOR_REVIEW" || 
                          pipelineResult.status === "READY_FOR_ANALYSIS" ||
-                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0);
+                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0) ||
+                         (pipelineResult.ingredients.length > 0);
 
       return NextResponse.json({
         success: isAccepted,

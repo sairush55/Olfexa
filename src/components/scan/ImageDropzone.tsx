@@ -588,16 +588,14 @@ export const ImageDropzone: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setShowApiKeyInput(true);
-              }}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-mono text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              onClick={() => handlePresetSelect(SAMPLE_PRESETS[0])}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-mono text-purple-700 dark:text-purple-400 hover:underline transition-colors"
             >
-              (Optional) Advanced: Gemini AI Key
+              🧪 Try with Sample Perfume
             </button>
           </div>
-          <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 pt-1">
-            * No API key is required. OLFEXA runs locally in your browser for free.
+          <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 pt-1">
+            * 100% Free &amp; Private: OLFEXA runs locally in your browser. No API key or account needed.
           </p>
         </div>
       )}

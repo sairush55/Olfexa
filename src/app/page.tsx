@@ -15,7 +15,8 @@ import {
   FileText, 
   Check, 
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  Smartphone
 } from "lucide-react";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { LogoIntroAnimation } from "@/components/brand/LogoIntroAnimation";
@@ -85,6 +86,16 @@ export default function LandingPage() {
                 <span>How It Works</span>
                 <ChevronDown className="w-3.5 h-3.5 opacity-60" />
               </a>
+
+              {/* Install as App on Mobile */}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("olfexa-trigger-install"))}
+                className="sm:hidden inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-emerald-300/80 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 text-xs font-semibold shadow-2xs active:scale-98 transition-all"
+              >
+                <Smartphone className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span>Install OLFEXA as App</span>
+              </button>
             </div>
 
             <p className="text-xs text-slate-500 font-mono pt-1">

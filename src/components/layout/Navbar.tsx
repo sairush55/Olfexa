@@ -16,7 +16,8 @@ import {
   Moon, 
   LogOut, 
   Database,
-  HelpCircle
+  HelpCircle,
+  Smartphone
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -188,6 +189,26 @@ export const Navbar: React.FC = () => {
               </Link>
             );
           })}
+
+          {/* Mobile Install App action button */}
+          <div className="pt-2 pb-1">
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                window.dispatchEvent(new CustomEvent("olfexa-trigger-install"));
+              }}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-emerald-300/80 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 text-xs font-semibold hover:bg-emerald-100/70 transition-colors shadow-2xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Smartphone className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span>Install OLFEXA as App</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-200/70 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-200 font-bold">
+                Install
+              </span>
+            </button>
+          </div>
+
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-2">
             {user ? (
               <div className="flex items-center justify-between w-full">

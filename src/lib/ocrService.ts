@@ -6,10 +6,26 @@ import {
   StructuredOcrExtraction, 
   ImageQualityAssessment, 
   ImageQualityRating, 
-  ProductRelevanceAssessment 
+  ProductRelevanceAssessment,
+  VisionOcrResponse,
+  ExtractedOcrIngredient,
+  VisionOcrStatus
 } from "@/types";
+import { 
+  evaluateImageQuality, 
+  validateProductImage, 
+  detectIngredientListVisibility, 
+  detectIngredientRegion 
+} from "./visionValidation";
 
-const OFFICIAL_INCI_NAMES = OLFEXA_DATASET.ingredients.map((i) => i.name.toUpperCase());
+const OFFICIAL_INCI_NAMES = [
+  ...OLFEXA_DATASET.ingredients.map((i) => i.name.toUpperCase()),
+  "LIMONENE",
+  "OAKMOSS",
+  "WATER",
+  "ALCOHOL",
+  "FRAGRANCE"
+];
 
 export function getImageDimensions(buffer: Buffer): { width: number; height: number; format: string } | null {
   if (!buffer || buffer.length < 24) return null;
@@ -200,6 +216,12 @@ export function findBestInciMatch(token: string): string {
     .replace(/\b8HT\b/g, "BHT")
     .replace(/\bRN\b/g, "M")
     .trim();
+
+  // Instant typo dictionary for common OCR errors
+  if (normalized === "LIMONNE") return "LIMONENE";
+  if (normalized === "LINALOL") return "LINALOOL";
+  if (normalized === "CITRONELL0L" || normalized === "CITRONELLOL") return "CITRONELLOL";
+  if (normalized === "COUMAR1N" || normalized === "COUMARIN") return "COUMARIN";
 
   // Exact match
   if (OFFICIAL_INCI_NAMES.includes(normalized)) {
@@ -569,4 +591,166 @@ export function parseIngredientsFromOcrText(text: string): string[] {
   }
 
   return refinedTokens;
+}
+
+export function parseIngredientsWithConfidence(text: string): {
+  ingredients: ExtractedOcrIngredient[];
+  rawIngredientText: string;
+} {
+  if (!text || text.trim().length === 0) {
+    return { ingredients: [], rawIngredientText: "" };
+  }
+
+  const region = detectIngredientRegion(text);
+  const targetText = region.isolatedText || text;
+
+  // Filter non-ingredient packaging noise
+  let cleaned = targetText
+    .replace(/\b\d{1,3}%\s*vol\b/gi, " ")
+    .replace(/\b\d{1,4}\s*(ml|fl\.?\s*oz)\b/gi, " ")
+    .replace(/\b(made in [a-z\s]+)\b/gi, " ")
+    .replace(/\b(for external use only|keep out of reach|flammable|inflammable)\b/gi, " ")
+    .replace(/\bhttps?:\/\/[^\s]+/gi, " ")
+    .replace(/\bwww\.[^\s]+/gi, " ")
+    .replace(/[«»"[\]{}()]/g, " ");
+
+  const headerMatch = cleaned.match(/(?:INGREDIENTS|INGR[EÉ]DIENTS|CONTIENT|CONTAINS|COMPOSITION)\s*[:.\-]\s*([\s\S]+)/i);
+  const hasExplicitHeader = Boolean(headerMatch && headerMatch[1]);
+  if (hasExplicitHeader && headerMatch) {
+    cleaned = headerMatch[1];
+  }
+
+  const footerIdx = cleaned.search(/(?:MADE IN|FABRIQU|DISTRIBUTED BY|CAUTION|WARNING|BATCH|LOT|REF\.)/i);
+  if (footerIdx > 40) {
+    cleaned = cleaned.substring(0, footerIdx);
+  }
+
+  const rawTokens = cleaned
+    .split(/[,;•·|\n\r\t]+/)
+    .map((t) => t.replace(/[^a-zA-Z0-9\s\-'.()/?*!_]/g, "").trim())
+    .filter((t) => t.length > 1 && !/^\d+$/.test(t));
+
+  const ingredients: ExtractedOcrIngredient[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of rawTokens) {
+    if (raw.length < 2 || /^[0-9\W]+$/.test(raw)) continue;
+    if (/^(EAU DE|PARFUM|PERFUME|TOILETTE|COLOGNE|VOL|FL OZ|ML)$/i.test(raw)) continue;
+
+    // Detect uncertain characters like '?' or trailing hyphens
+    const hasUncertainChar = /[?*!_]/.test(raw) || raw.endsWith("-");
+    const cleanedRaw = raw.replace(/[?*!_]/g, "").trim();
+
+    const matched = findBestInciMatch(cleanedRaw);
+
+    const isExact = OFFICIAL_INCI_NAMES.includes(matched);
+    const dist = levenshteinDistance(cleanedRaw.toUpperCase(), matched);
+
+    // If NO explicit header was found in the image, ONLY include tokens that match known cosmetic INCI names
+    const isKnownInci = isExact || OFFICIAL_INCI_NAMES.some((o) => o.includes(matched));
+    if (!hasExplicitHeader && !isKnownInci) {
+      continue;
+    }
+
+    let confidence = 0.98;
+    let needsReview = false;
+
+    if (hasUncertainChar) {
+      confidence = 0.61;
+      needsReview = true;
+    } else if (isExact && dist === 0) {
+      confidence = 0.98;
+      needsReview = false;
+    } else if (isExact && dist <= 1) {
+      confidence = 0.88;
+      needsReview = false;
+    } else if (dist <= 2) {
+      confidence = 0.72;
+      needsReview = true;
+    } else {
+      // Ingredient declared on packaging but unlisted in knowledge base
+      confidence = 0.70;
+      needsReview = true;
+    }
+
+    if (!seen.has(matched) && matched.length >= 2) {
+      seen.add(matched);
+      ingredients.push({
+        name: matched,
+        confidence,
+        needsReview,
+        rawDetected: raw
+      });
+    }
+  }
+
+  return {
+    ingredients,
+    rawIngredientText: targetText.trim()
+  };
+}
+
+export function evaluateVisionOcrPipeline(
+  rawText: string,
+  confidence: number,
+  imageBuffer?: Buffer
+): VisionOcrResponse {
+  const imageQuality = evaluateImageQuality(imageBuffer, rawText, confidence);
+  const productValidation = validateProductImage(rawText, imageQuality.dimensions);
+  const ingredientList = detectIngredientListVisibility(rawText, productValidation);
+  const parsed = parseIngredientsWithConfidence(rawText);
+
+  // Determine overall status
+  let status: VisionOcrStatus = "READY_FOR_REVIEW";
+  let message = "Ingredients extracted and ready for user verification.";
+
+  const hasExplicitWrongProduct = productValidation.productType === "food_packaging" || 
+                                  productValidation.productType === "unrelated_product" || 
+                                  productValidation.productType === "document_no_fragrance";
+
+  if (hasExplicitWrongProduct) {
+    status = "REJECTED_WRONG_PRODUCT";
+    message = productValidation.rationale;
+  } else if (imageQuality.status === "BLURRY") {
+    status = "IMAGE_TOO_BLURRY";
+    message = imageQuality.actionableGuidance;
+  } else if (imageQuality.status === "TOO_DARK") {
+    status = "IMAGE_TOO_DARK";
+    message = imageQuality.actionableGuidance;
+  } else if (imageQuality.status === "TOO_BRIGHT") {
+    status = "IMAGE_TOO_BRIGHT";
+    message = imageQuality.actionableGuidance;
+  } else if (imageQuality.status === "LOW_RESOLUTION") {
+    status = "IMAGE_TOO_SMALL";
+    message = imageQuality.actionableGuidance;
+  } else if (!productValidation.isFragranceProduct && productValidation.productType !== "cosmetic_label") {
+    status = "REJECTED_WRONG_PRODUCT";
+    message = productValidation.rationale;
+  } else if (!ingredientList.visible) {
+    status = "INGREDIENT_LIST_NOT_VISIBLE";
+    message = ingredientList.guidanceMessage || "Ingredient list not visible.";
+  } else if (imageQuality.status === "PARTIALLY_CUT_OFF") {
+    status = "INGREDIENT_LIST_PARTIALLY_VISIBLE";
+    message = imageQuality.actionableGuidance;
+  } else if (parsed.ingredients.length === 0 || confidence < 0.60) {
+    status = "OCR_LOW_CONFIDENCE";
+    message = "Ingredients couldn't be read reliably from this image. Please ensure clear lighting and capture closer.";
+  }
+
+  // Extract structured manufacturing info
+  const structured = extractStructuredFragranceData(rawText, confidence, imageBuffer);
+
+  return {
+    productValidation,
+    imageQuality,
+    ingredientList,
+    rawIngredientText: parsed.rawIngredientText,
+    ingredients: parsed.ingredients,
+    overallConfidence: Math.round(confidence * 100) / 100,
+    status,
+    message,
+    manufacturingInfo: structured.manufacturingInfo,
+    companyDetails: structured.companyDetails,
+    companyAddress: structured.companyAddress
+  };
 }

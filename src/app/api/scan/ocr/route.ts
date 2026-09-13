@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processImageOcr, extractStructuredFragranceData, parseIngredientsFromOcrText } from "@/lib/ocrService";
+import { 
+  processImageOcr, 
+  extractStructuredFragranceData, 
+  evaluateVisionOcrPipeline 
+} from "@/lib/ocrService";
 
 export const maxDuration = 30;
 
@@ -36,72 +40,96 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Branch A: If client already extracted rawText via browser WebAssembly Tesseract,
-    // perform instant structured INCI parsing & provenance classification
+    // Branch A: Client-extracted raw text (from browser WebAssembly Tesseract or manual input)
     if (clientRawText && clientRawText.trim().length > 0) {
-      const structured = extractStructuredFragranceData(
-        clientRawText,
-        typeof clientConfidence === "number" ? clientConfidence : 0.88,
-        imageInput || undefined
-      );
+      const rawText = clientRawText.trim();
+      const confidence = typeof clientConfidence === "number" ? clientConfidence : 0.88;
+      
+      // Run the rigorous Vision/OCR evaluation pipeline
+      const pipelineResult = evaluateVisionOcrPipeline(rawText, confidence, imageInput || undefined);
+      const isAccepted = pipelineResult.status === "READY_FOR_REVIEW" || 
+                         pipelineResult.status === "READY_FOR_ANALYSIS" ||
+                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0);
 
       return NextResponse.json({
-        success: true,
+        success: isAccepted,
+        status: pipelineResult.status,
+        message: pipelineResult.message,
         source: "client_webassembly_ocr",
-        isPerfume: structured.isPerfume,
-        fragranceType: structured.fragranceType,
-        detectionReason: structured.detectionReason,
-        confidence: structured.confidence,
-        rawText: structured.rawText,
-        candidates: structured.candidates,
-        imageQuality: structured.imageQuality,
-        relevance: structured.relevance,
-        manufacturingInfo: structured.manufacturingInfo,
-        companyDetails: structured.companyDetails,
-        companyAddress: structured.companyAddress,
-        note: structured.relevance?.isRelevant
-          ? `Verified ${structured.relevance.classificationName} (${structured.fragranceType}).`
-          : "Image text does not appear to contain standard cosmetic fragrance declarations. Please inspect carefully in review stage."
+        isPerfume: pipelineResult.productValidation.isFragranceProduct,
+        fragranceType: pipelineResult.manufacturingInfo?.batchCode ? "Eau de Parfum" : "Fragrance Formulation",
+        detectionReason: pipelineResult.productValidation.rationale,
+        confidence: pipelineResult.overallConfidence,
+        rawText: pipelineResult.rawIngredientText || rawText,
+        rawIngredientText: pipelineResult.rawIngredientText,
+        candidates: pipelineResult.ingredients.map((i) => i.name),
+        ingredients: pipelineResult.ingredients,
+        productValidation: pipelineResult.productValidation,
+        imageQuality: pipelineResult.imageQuality,
+        ingredientList: pipelineResult.ingredientList,
+        manufacturingInfo: pipelineResult.manufacturingInfo,
+        companyDetails: pipelineResult.companyDetails,
+        companyAddress: pipelineResult.companyAddress,
+        actionableGuidance: pipelineResult.imageQuality.actionableGuidance || pipelineResult.ingredientList.guidanceMessage
       });
     }
 
     // Branch B: Process image on server (using Gemini Vision AI if key available, or server Tesseract)
     if (!imageInput || imageInput.length === 0) {
       return NextResponse.json(
-        { error: "No valid image payload or OCR text provided." },
+        { 
+          success: false,
+          status: "OCR_LOW_CONFIDENCE",
+          error: "No valid image payload or OCR text provided." 
+        },
         { status: 400 }
       );
     }
 
     try {
       const ocrResult = await processImageOcr(imageInput, userApiKey);
+      const pipelineResult = evaluateVisionOcrPipeline(
+        ocrResult.rawText || "",
+        ocrResult.confidence || 0.85,
+        imageInput
+      );
+
+      const isAccepted = pipelineResult.status === "READY_FOR_REVIEW" || 
+                         pipelineResult.status === "READY_FOR_ANALYSIS" ||
+                         (pipelineResult.status === "INGREDIENT_LIST_PARTIALLY_VISIBLE" && pipelineResult.ingredients.length > 0);
 
       return NextResponse.json({
-        success: true,
+        success: isAccepted,
+        status: pipelineResult.status,
+        message: pipelineResult.message,
         source: (userApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) ? "gemini_vision_ai" : "server_ocr",
-        isPerfume: ocrResult.isPerfume,
-        fragranceType: ocrResult.fragranceType,
-        detectionReason: ocrResult.detectionReason,
-        confidence: ocrResult.confidence,
-        rawText: ocrResult.rawText,
-        candidates: ocrResult.candidates,
-        imageQuality: ocrResult.imageQuality,
-        relevance: ocrResult.relevance,
-        manufacturingInfo: ocrResult.manufacturingInfo,
-        companyDetails: ocrResult.companyDetails,
-        companyAddress: ocrResult.companyAddress,
-        note: ocrResult.relevance?.isRelevant
-          ? `Verified ${ocrResult.relevance.classificationName} (${ocrResult.fragranceType}).`
-          : "Image text does not appear to contain standard cosmetic fragrance declarations. Please inspect carefully in review stage."
+        isPerfume: pipelineResult.productValidation.isFragranceProduct,
+        fragranceType: ocrResult.fragranceType || "Fragrance Formulation",
+        detectionReason: pipelineResult.productValidation.rationale,
+        confidence: pipelineResult.overallConfidence,
+        rawText: pipelineResult.rawIngredientText || ocrResult.rawText,
+        rawIngredientText: pipelineResult.rawIngredientText,
+        candidates: pipelineResult.ingredients.map((i) => i.name),
+        ingredients: pipelineResult.ingredients,
+        productValidation: pipelineResult.productValidation,
+        imageQuality: pipelineResult.imageQuality,
+        ingredientList: pipelineResult.ingredientList,
+        manufacturingInfo: pipelineResult.manufacturingInfo || ocrResult.manufacturingInfo,
+        companyDetails: pipelineResult.companyDetails || ocrResult.companyDetails,
+        companyAddress: pipelineResult.companyAddress || ocrResult.companyAddress,
+        actionableGuidance: pipelineResult.imageQuality.actionableGuidance || pipelineResult.ingredientList.guidanceMessage
       });
     } catch (ocrErr: any) {
       console.warn("Server OCR processing error:", ocrErr.message);
       return NextResponse.json(
         {
           success: false,
+          status: "OCR_LOW_CONFIDENCE",
           error: "Optical character recognition could not resolve legible text from this image.",
+          message: "Could not read text from this image. Please ensure the camera is steady, well lit, and focused on the printed ingredient box.",
           details: ocrErr.message,
-          candidates: []
+          candidates: [],
+          ingredients: []
         },
         { status: 422 }
       );
@@ -109,7 +137,12 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("General OCR Route Exception:", error);
     return NextResponse.json(
-      { error: "OCR processing failed", details: error.message },
+      { 
+        success: false,
+        status: "OCR_LOW_CONFIDENCE",
+        error: "OCR processing failed", 
+        details: error.message 
+      },
       { status: 500 }
     );
   }

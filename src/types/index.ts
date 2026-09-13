@@ -184,6 +184,151 @@ export interface AnalysisResult {
   provenance?: PackagingProvenance;
   imageQuality?: ImageQualityAssessment;
   relevance?: ProductRelevanceAssessment;
+  suitabilityProfile?: SuitabilityProfile;
+  fragrancePersona?: FragrancePersona;
+}
+
+// ==============================================================================
+// 1. VISION / OCR PIPELINE TYPES (Strict non-medical extraction layer)
+// ==============================================================================
+
+export type VisionOcrStatus =
+  | "REJECTED_WRONG_PRODUCT"
+  | "IMAGE_TOO_BLURRY"
+  | "IMAGE_TOO_DARK"
+  | "IMAGE_TOO_BRIGHT"
+  | "IMAGE_TOO_SMALL"
+  | "INGREDIENT_LIST_NOT_VISIBLE"
+  | "INGREDIENT_LIST_PARTIALLY_VISIBLE"
+  | "OCR_LOW_CONFIDENCE"
+  | "READY_FOR_REVIEW"
+  | "READY_FOR_ANALYSIS";
+
+export interface ExtractedOcrIngredient {
+  name: string;
+  confidence: number; // 0.0 - 1.0
+  needsReview: boolean; // true if confidence < 0.75 or ambiguous character
+  rawDetected?: string;
+}
+
+export interface ProductValidationResult {
+  isFragranceProduct: boolean;
+  productType:
+    | "perfume_bottle"
+    | "perfume_box"
+    | "fragrance_ingredient_label"
+    | "cosmetic_label"
+    | "unrelated_product"
+    | "food_packaging"
+    | "document_no_fragrance"
+    | "human_photo"
+    | "random_object";
+  confidence: number;
+  rationale: string;
+}
+
+export interface ImageQualityEvaluation {
+  status: "GOOD" | "BLURRY" | "TOO_DARK" | "TOO_BRIGHT" | "LOW_RESOLUTION" | "PARTIALLY_CUT_OFF" | "UNREADABLE";
+  confidence: number;
+  isBlurry: boolean;
+  isTooDark: boolean;
+  isTooBright: boolean;
+  isTooSmall: boolean;
+  isPartiallyCutOff: boolean;
+  clarityScore: number; // 0 - 100
+  dimensions?: { width: number; height: number };
+  issues: string[];
+  actionableGuidance: string;
+}
+
+export interface IngredientListVisibility {
+  visible: boolean;
+  confidence: number;
+  headerFound?: string; // e.g. "INGREDIENTS:", "CONTAINS:", "COMPOSITION:"
+  guidanceMessage?: string;
+}
+
+export interface VisionOcrResponse {
+  productValidation: ProductValidationResult;
+  imageQuality: ImageQualityEvaluation;
+  ingredientList: IngredientListVisibility;
+  rawIngredientText: string;
+  ingredients: ExtractedOcrIngredient[];
+  overallConfidence: number;
+  status: VisionOcrStatus;
+  message?: string;
+  manufacturingInfo?: {
+    dateOfManufacture?: string;
+    batchCode?: string;
+    periodAfterOpening?: string;
+    expiryDate?: string;
+  };
+  companyDetails?: {
+    brandName?: string;
+    manufacturer?: string;
+    distributor?: string;
+  };
+  companyAddress?: {
+    fullAddress?: string;
+    countryOfOrigin?: string;
+    responsiblePersonEU?: string;
+  };
+}
+
+// ==============================================================================
+// 2. EVIDENCE-BASED SUITABILITY PROFILE TYPES (Post-Verification Rules Layer)
+// ==============================================================================
+
+export type SuitabilityUserGroup =
+  | "children"
+  | "adults"
+  | "fragranceSensitiveUsers"
+  | "sensitiveSkin"
+  | "pregnancy"
+  | "breastfeeding";
+
+export type SuitabilityStatus =
+  | "LOW_CONCERN_BASED_ON_AVAILABLE_DATA"
+  | "ADDITIONAL_CAUTION"
+  | "REQUIRES_MORE_INFORMATION"
+  | "INSUFFICIENT_EVIDENCE"
+  | "NOT_ENOUGH_INFORMATION_TO_ASSESS"
+  | "REQUIRES_REVIEW";
+
+export interface UserGroupSuitability {
+  group: SuitabilityUserGroup;
+  displayName: string;
+  icon: string; // e.g. "👶", "👤", "🌿", "🌸", "🤰", "🤱"
+  status: SuitabilityStatus;
+  statusLabel: string;
+  reasonCodes: string[];
+  contributingIngredients: string[];
+  evidence: EvidenceSource[];
+  explanation: string;
+  limitations: string;
+}
+
+export interface SuitabilityProfile {
+  groups: Record<SuitabilityUserGroup, UserGroupSuitability>;
+  overallTransparencyNote: string;
+  hasIncompleteIngredients: boolean;
+  hasUnknownIngredients: boolean;
+  unknownIngredientsCount: number;
+}
+
+// ==============================================================================
+// 3. FRAGRANCE PERSONA (Strictly Entertainment / Discovery Personalization)
+// ==============================================================================
+
+export interface FragrancePersona {
+  zodiacSign?: string;
+  scentFamilies: string[];
+  vibe: string;
+  intensityPreference: "subtle" | "moderate" | "projective" | "intense";
+  suggestedOccasions: string[];
+  attarRecommendation?: string;
+  perfumeRecommendation?: string;
+  disclaimer: string;
 }
 
 export interface WatchlistItem {

@@ -16,7 +16,7 @@ import {
   Edit3
 } from "lucide-react";
 import { IngredientReviewList } from "@/components/scan/IngredientReviewList";
-import { PackagingProvenance } from "@/types";
+import { PackagingProvenance, ExtractedOcrIngredient } from "@/types";
 
 const DEFAULT_REVIEW_INGREDIENTS = [
   "ALCOHOL DENAT.",
@@ -54,6 +54,8 @@ const DEFAULT_PROVENANCE: PackagingProvenance = {
 
 export default function ReviewPage() {
   const [ingredients, setIngredients] = useState<string[]>(DEFAULT_REVIEW_INGREDIENTS);
+  const [detailedIngredients, setDetailedIngredients] = useState<ExtractedOcrIngredient[] | undefined>(undefined);
+  const [rawOcrText, setRawOcrText] = useState<string | undefined>(undefined);
   const [perfumeName, setPerfumeName] = useState("Scanned Fragrance");
   const [brandName, setBrandName] = useState("Declared Brand");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
@@ -63,6 +65,8 @@ export default function ReviewPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("olfexa_review_ingredients");
+      const storedDetailed = sessionStorage.getItem("olfexa_review_ingredients_detailed");
+      const storedRaw = sessionStorage.getItem("olfexa_review_raw_text");
       const storedName = sessionStorage.getItem("olfexa_review_perfume");
       const storedBrand = sessionStorage.getItem("olfexa_review_brand");
       const storedImg = sessionStorage.getItem("olfexa_review_image");
@@ -78,6 +82,19 @@ export default function ReviewPage() {
           // fallback
         }
       }
+
+      if (storedDetailed) {
+        try {
+          const parsedDetailed = JSON.parse(storedDetailed);
+          if (Array.isArray(parsedDetailed) && parsedDetailed.length > 0) {
+            setDetailedIngredients(parsedDetailed);
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      if (storedRaw) setRawOcrText(storedRaw);
       if (storedName) setPerfumeName(storedName);
       if (storedBrand) setBrandName(storedBrand);
       if (storedImg) setImageUrl(storedImg);
@@ -387,6 +404,8 @@ export default function ReviewPage() {
           <div className="p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs">
             <IngredientReviewList
               initialIngredients={ingredients}
+              detailedIngredients={detailedIngredients}
+              rawOcrText={rawOcrText}
               perfumeName={perfumeName}
               brandName={brandName}
               imageUrl={imageUrl}

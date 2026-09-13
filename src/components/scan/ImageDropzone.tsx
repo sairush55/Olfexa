@@ -78,6 +78,14 @@ const SAMPLE_PRESETS: SamplePreset[] = [
   }
 ];
 
+const PIPELINE_STEPS = [
+  { step: 1, label: "Checking image" },
+  { step: 2, label: "Verifying product" },
+  { step: 3, label: "Finding ingredient label" },
+  { step: 4, label: "Reading ingredients" },
+  { step: 5, label: "Review detected ingredients" }
+];
+
 export const ImageDropzone: React.FC = () => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,11 +110,14 @@ export const ImageDropzone: React.FC = () => {
   const [perfumeName, setPerfumeName] = useState("");
   const [brandName, setBrandName] = useState("");
 
-  // Processing state
+  // Processing state & 5-step stepper
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [progressStep, setProgressStep] = useState("");
   const [progressPercent, setProgressPercent] = useState(0);
   const [scanErrorMessage, setScanErrorMessage] = useState<string | null>(null);
+  const [rejectionStatus, setRejectionStatus] = useState<string | null>(null);
+  const [rejectionGuidance, setRejectionGuidance] = useState<string | null>(null);
 
   // AI Vision Key (optional)
   const [apiKey, setApiKey] = useState("");
@@ -229,20 +240,26 @@ export const ImageDropzone: React.FC = () => {
     router.push("/scan/review");
   };
 
-  // Main Scan Execution
+  // Main Scan Execution with 5-Step Progress Stepper
   const handleStartReview = async () => {
     setScanErrorMessage(null);
+    setRejectionStatus(null);
+    setRejectionGuidance(null);
     setIsProcessing(true);
-    setProgressStep("Initializing Vision Engine...");
-    setProgressPercent(5);
+    setCurrentStepIndex(1);
+    setProgressStep("Checking image quality & clarity...");
+    setProgressPercent(15);
 
     let extracted: string[] = [];
+    let detailedIngredients: any[] = [];
+    let rawOcrText = "";
     let detectedPerfumeName = perfumeName;
     let detectedBrandName = brandName;
     let provenanceData: any = null;
 
     // Mode A: Manual text entry
     if (activeTab === "manual" && manualText.trim()) {
+      setCurrentStepIndex(4);
       setProgressStep("Normalizing INCI chemical nomenclature...");
       setProgressPercent(80);
 
@@ -251,6 +268,15 @@ export const ImageDropzone: React.FC = () => {
         .map((s) => s.trim())
         .filter((s) => s.length > 1);
 
+      detailedIngredients = extracted.map((name) => ({
+        name,
+        confidence: 1.0,
+        needsReview: false,
+        rawDetected: name
+      }));
+      rawOcrText = manualText.trim();
+
+      setCurrentStepIndex(5);
       setProgressPercent(100);
     } 
     // Mode B: Image OCR / Vision
@@ -259,70 +285,97 @@ export const ImageDropzone: React.FC = () => {
       const userKey = apiKey.trim() || undefined;
 
       try {
-        // Strategy 1: If user supplied a Gemini Vision key, use cloud AI vision for 99% accuracy
+        // Step 1: Checking image
+        setCurrentStepIndex(1);
+        setProgressStep("Checking image resolution, blur, and lighting...");
+        setProgressPercent(20);
+
         if (userKey) {
-          setProgressStep("Analyzing with Gemini Multimodal AI Vision...");
-          setProgressPercent(30);
+          // Multimodal AI Vision
+          setCurrentStepIndex(2);
+          setProgressStep("Verifying fragrance product with Gemini AI Vision...");
+          setProgressPercent(35);
 
           const formData = new FormData();
           formData.append("image", activeBlob);
           formData.append("apiKey", userKey);
+
+          setCurrentStepIndex(3);
+          setProgressStep("Finding ingredient label on packaging...");
+          setProgressPercent(50);
 
           const res = await fetch("/api/scan/ocr", {
             method: "POST",
             body: formData,
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            extracted = data.candidates || [];
-            detectedPerfumeName = data.manufacturingInfo?.brandName || perfumeName;
-            provenanceData = data;
-          } else {
-            const errData = await res.json();
-            throw new Error(errData.error || "Gemini Vision analysis could not read the image.");
+          const data = await res.json();
+
+          if (!data.success) {
+            setRejectionStatus(data.status || "REJECTED");
+            setRejectionGuidance(data.actionableGuidance || data.message || "Please re-take photo following guidance.");
+            throw new Error(data.message || data.error || "Vision analysis rejected this image.");
           }
-        } 
-        // Strategy 2: High-Performance Client-Side WebAssembly OCR
-        else {
-          setProgressStep("Starting local optical engine...");
-          setProgressPercent(15);
+
+          setCurrentStepIndex(4);
+          setProgressStep("Reading and harmonizing INCI ingredients...");
+          setProgressPercent(85);
+
+          extracted = data.candidates || [];
+          detailedIngredients = data.ingredients || [];
+          rawOcrText = data.rawIngredientText || data.rawText || "";
+          detectedPerfumeName = data.manufacturingInfo?.brandName || perfumeName;
+          provenanceData = data;
+        } else {
+          // Local WebAssembly OCR Pipeline
+          setCurrentStepIndex(2);
+          setProgressStep("Verifying fragrance product packaging...");
+          setProgressPercent(25);
+
+          setCurrentStepIndex(3);
+          setProgressStep("Locating ingredient label & running optical reader...");
+          setProgressPercent(40);
 
           // Run in-browser WebAssembly OCR with real-time progress callbacks
           const ocrResult = await runBrowserOcr(activeBlob, (step, percent) => {
             setProgressStep(step);
-            setProgressPercent(percent);
+            setProgressPercent(Math.min(percent, 75));
           });
 
-          setProgressStep("Harmonizing candidate tokens with INCI knowledge base...");
-          setProgressPercent(90);
+          rawOcrText = ocrResult.rawText;
 
-          // Send raw text to serverless route for instant regulatory classification & token harmonization
+          setCurrentStepIndex(4);
+          setProgressStep("Reading ingredients & harmonizing with INCI dataset...");
+          setProgressPercent(85);
+
+          // Send FormData to serverless validation pipeline
+          const formData = new FormData();
+          formData.append("image", activeBlob);
+          formData.append("rawText", ocrResult.rawText);
+          formData.append("confidence", ocrResult.confidence.toString());
+
           const res = await fetch("/api/scan/ocr", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              rawText: ocrResult.rawText,
-              confidence: ocrResult.confidence,
-            }),
+            body: formData,
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            extracted = data.candidates || [];
-            provenanceData = data;
-          } else {
-            // If server route unreachable, do client-side token fallback
-            const rawTokens = ocrResult.rawText
-              .split(/[,;\n\r\t]+/)
-              .map((t) => t.replace(/[^a-zA-Z0-9\s\-'.()/]/g, "").trim().toUpperCase())
-              .filter((t) => t.length > 2 && !/^\d+$/.test(t));
-            extracted = rawTokens;
+          const data = await res.json();
+
+          if (!data.success) {
+            setRejectionStatus(data.status || "REJECTED");
+            setRejectionGuidance(data.actionableGuidance || data.message || "Please re-take photo following guidance.");
+            throw new Error(data.message || data.error || "Vision analysis rejected this image.");
           }
+
+          extracted = data.candidates || [];
+          detailedIngredients = data.ingredients || [];
+          rawOcrText = data.rawIngredientText || data.rawText || rawOcrText;
+          provenanceData = data;
         }
       } catch (err: any) {
         console.error("Scan processing error:", err);
         setIsProcessing(false);
+        setCurrentStepIndex(0);
         setScanErrorMessage(
           err.message || "Could not resolve legible cosmetic text from this photo. Please ensure clear lighting and focus on the ingredient list."
         );
@@ -333,15 +386,23 @@ export const ImageDropzone: React.FC = () => {
     // Check if any ingredients were detected
     if (extracted.length === 0) {
       setIsProcessing(false);
+      setCurrentStepIndex(0);
       setScanErrorMessage(
         "No cosmetic ingredients could be detected in this photo. Perfume packaging can have reflective glass or fine print. Please try capturing closer to the ingredient box in bright light, or enter them manually."
       );
       return;
     }
 
+    // Step 5: Review detected ingredients
+    setCurrentStepIndex(5);
+    setProgressStep("Extraction verified! Directing to Ingredient Review Checkpoint...");
+    setProgressPercent(100);
+
     // Store in session and proceed to review checkpoint
     if (typeof window !== "undefined") {
       sessionStorage.setItem("olfexa_review_ingredients", JSON.stringify(extracted));
+      sessionStorage.setItem("olfexa_review_ingredients_detailed", JSON.stringify(detailedIngredients));
+      sessionStorage.setItem("olfexa_review_raw_text", rawOcrText);
       sessionStorage.setItem("olfexa_review_perfume", detectedPerfumeName || "Scanned Fragrance");
       sessionStorage.setItem("olfexa_review_brand", detectedBrandName || "Declared Brand");
       if (previewUrl) {
@@ -356,7 +417,11 @@ export const ImageDropzone: React.FC = () => {
             detectionReason: provenanceData.detectionReason,
             confidence: provenanceData.confidence,
             imageQuality: provenanceData.imageQuality,
-            relevance: provenanceData.relevance,
+            relevance: provenanceData.productValidation ? {
+              isRelevant: provenanceData.productValidation.isFragranceProduct,
+              classificationName: provenanceData.productValidation.productType,
+              rationale: provenanceData.productValidation.rationale
+            } : provenanceData.relevance,
             manufacturingInfo: provenanceData.manufacturingInfo || {},
             companyDetails: provenanceData.companyDetails || {},
             companyAddress: provenanceData.companyAddress || {},
@@ -364,9 +429,6 @@ export const ImageDropzone: React.FC = () => {
         );
       }
     }
-
-    setProgressStep("Scan successful! Directing to Ingredient Review Checkpoint...");
-    setProgressPercent(100);
 
     setTimeout(() => {
       router.push("/scan/review");
@@ -442,33 +504,56 @@ export const ImageDropzone: React.FC = () => {
         </div>
       </div>
 
-      {/* Error Alert Banner with 1-Click Action Steps */}
+      {/* Structured Vision/OCR Error Alert Banner */}
       {scanErrorMessage && (
-        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-3 text-xs text-amber-900 dark:text-amber-200">
+        <div className="max-w-xl mx-auto p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-900/60 space-y-3.5 text-xs text-amber-950 dark:text-amber-200 shadow-sm">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-semibold block">OCR Label Scan Notice</span>
-              <p>{scanErrorMessage}</p>
+            <div className="space-y-1.5 flex-1">
+              <span className="font-bold text-sm tracking-tight text-amber-900 dark:text-amber-100 block">
+                {rejectionStatus ? `Scan Verification Notice: ${rejectionStatus.replace(/_/g, " ")}` : "OCR Label Scan Notice"}
+              </span>
+              <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-200 font-medium">
+                {scanErrorMessage}
+              </p>
+              {rejectionGuidance && (
+                <div className="p-3 rounded-xl bg-amber-100/70 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-950 dark:text-amber-100 leading-relaxed font-mono">
+                  💡 <strong>Actionable Guidance:</strong> {rejectionGuidance}
+                </div>
+              )}
             </div>
           </div>
-          <div className="pt-2 border-t border-amber-200/60 dark:border-amber-900/40 flex flex-wrap items-center gap-2">
+          <div className="pt-2.5 border-t border-amber-200/80 dark:border-amber-900/40 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 setActiveTab("manual");
                 setScanErrorMessage(null);
+                setRejectionStatus(null);
+                setRejectionGuidance(null);
               }}
-              className="px-3 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-medium transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white text-[11px] font-semibold transition-colors"
             >
-              ✍️ Enter Manually Instead
+              ✍️ Enter Ingredients Manually
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setScanErrorMessage(null);
+                setRejectionStatus(null);
+                setRejectionGuidance(null);
+                if (fileInputRef.current) fileInputRef.current.click();
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
+            >
+              📸 Retake / Choose New Image
             </button>
             <button
               type="button"
               onClick={() => {
                 setShowApiKeyInput(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
             >
               🔑 Use Free AI Vision (Gemini Key)
             </button>
@@ -657,23 +742,51 @@ export const ImageDropzone: React.FC = () => {
             </div>
           )}
 
-          {/* Progress Bar during Scanning */}
+          {/* 5-Step Pipeline Progress Stepper during Scanning */}
           {isProcessing && (
-            <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/90 dark:border-emerald-900/40 space-y-2.5">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-mono font-medium text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span>{progressStep}</span>
+                <span className="font-mono font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span className="truncate">{progressStep}</span>
                 </span>
-                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
                   {progressPercent}%
                 </span>
               </div>
-              <div className="w-full h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-900/60 overflow-hidden">
+
+              <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div
                   className="h-full bg-emerald-600 transition-all duration-300 ease-out"
                   style={{ width: `${progressPercent}%` }}
                 />
+              </div>
+
+              {/* Sequential 5-Step Indicators */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pt-1">
+                {PIPELINE_STEPS.map((s) => {
+                  const isDone = currentStepIndex > s.step;
+                  const isCurrent = currentStepIndex === s.step;
+                  return (
+                    <div
+                      key={s.step}
+                      className={`flex items-center gap-1.5 p-2 rounded-xl text-[10px] font-mono transition-all ${
+                        isDone
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-semibold"
+                          : isCurrent
+                          ? "bg-emerald-700 text-white font-bold shadow-xs animate-pulse"
+                          : "bg-slate-50 dark:bg-slate-800/40 text-slate-400 border border-slate-100 dark:border-slate-800"
+                      }`}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] shrink-0 font-bold ${
+                        isDone ? "bg-emerald-600 text-white" : isCurrent ? "bg-white text-emerald-800" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                      }`}>
+                        {isDone ? "✓" : s.step}
+                      </span>
+                      <span className="truncate leading-tight">{s.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

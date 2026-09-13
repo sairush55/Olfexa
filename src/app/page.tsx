@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { 
   Camera, 
   ArrowRight, 
@@ -17,27 +18,45 @@ import {
   ChevronDown
 } from "lucide-react";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
+import { LogoIntroAnimation } from "@/components/brand/LogoIntroAnimation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LandingPage() {
   const { user } = useAuth();
   const scanLink = user ? "/scan" : "/login?redirect=/scan";
+  const [showIntro, setShowIntro] = useState(true);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground space-y-20 sm:space-y-24 pb-20 overflow-x-hidden">
-      
-      {/* ========================================================================= */}
-      {/* SECTION 1 — HERO                                                          */}
-      {/* ========================================================================= */}
-      <section className="relative pt-12 sm:pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
-          
-          {/* Left Column: Brand, Tagline & CTAs */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-emerald-300/60 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Fragrance Intelligence Platform</span>
-            </div>
+    <>
+      {showIntro && (
+        <LogoIntroAnimation onComplete={() => setShowIntro(false)} duration={2700} />
+      )}
+
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="flex flex-col min-h-screen bg-background text-foreground space-y-20 sm:space-y-24 pb-20 overflow-x-hidden"
+      >
+        
+        {/* ========================================================================= */}
+        {/* SECTION 1 — HERO                                                          */}
+        {/* ========================================================================= */}
+        <section className="relative pt-12 sm:pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+            
+            {/* Left Column: Brand, Tagline & CTAs */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+              <button
+                type="button"
+                onClick={() => setShowIntro(true)}
+                title="Replay intro animation"
+                className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-emerald-300/60 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-medium hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 transition-all cursor-pointer group"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Fragrance Intelligence Platform</span>
+                <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+              </button>
 
             <div className="space-y-3">
               <h1 className="text-4xl sm:text-6xl font-bold font-editorial-heading text-slate-950 dark:text-white tracking-tight leading-[1.12]">
@@ -427,6 +446,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-    </div>
+      </motion.div>
+    </>
   );
 }

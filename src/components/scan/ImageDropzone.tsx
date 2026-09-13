@@ -442,14 +442,47 @@ export const ImageDropzone: React.FC = () => {
         </div>
       </div>
 
-      {/* Error Alert Banner */}
+      {/* Error Alert Banner with 1-Click Action Steps */}
       {scanErrorMessage && (
-        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-3 text-xs text-amber-900 dark:text-amber-200">
-          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <span className="font-semibold block">Scan Notice</span>
-            <p>{scanErrorMessage}</p>
+        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-3 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-semibold block">OCR Label Scan Notice</span>
+              <p>{scanErrorMessage}</p>
+            </div>
           </div>
+          <div className="pt-2 border-t border-amber-200/60 dark:border-amber-900/40 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("manual");
+                setScanErrorMessage(null);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-medium transition-colors"
+            >
+              ✍️ Enter Manually Instead
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowApiKeyInput(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
+            >
+              🔑 Use Free AI Vision (Gemini Key)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Helpful Label Scanning Guide Tip */}
+      {activeTab === "upload" && !scanErrorMessage && (
+        <div className="max-w-xl mx-auto p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 flex items-center gap-2.5 text-[11px] text-slate-600 dark:text-slate-400">
+          <span className="text-base">💡</span>
+          <span>
+            <strong>Scanning Tip:</strong> Point your camera at the <strong>back of the paper box</strong> or the <strong>bottom sticker</strong> where <em>INGREDIENTS: ALCOHOL DENAT., ...</em> is printed. The front glass of bottles does not have an ingredient list!
+          </span>
         </div>
       )}
 

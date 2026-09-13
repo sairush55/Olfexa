@@ -113,23 +113,6 @@ export const Navbar: React.FC = () => {
             )}
           </button>
 
-          <Link
-            href="/login?redirect=/scan"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium tracking-wide shadow-sm transition-all"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>New Scan</span>
-          </Link>
-
-          {/* Supabase status indicator */}
-          <div
-            className="hidden lg:flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50"
-            title={isConfigured ? "Supabase Live Cloud DB & Auth Connected" : "Local Demo Mode (Configure .env.local for Cloud Auth)"}
-          >
-            <span className={cn("w-1.5 h-1.5 rounded-full", isConfigured ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-            <span className="text-slate-500 dark:text-slate-400">{isConfigured ? "Supabase" : "Local"}</span>
-          </div>
-
           {user ? (
             <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800">
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200 max-w-[120px] truncate" title={user.email || ""}>
@@ -146,7 +129,7 @@ export const Navbar: React.FC = () => {
           ) : (
             <Link
               href="/login"
-              className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white px-2 py-1 font-medium transition-colors"
+              className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white px-2.5 py-1.5 font-medium transition-colors"
             >
               Sign In
             </Link>
@@ -162,12 +145,6 @@ export const Navbar: React.FC = () => {
           >
             {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-500" />}
           </button>
-          <Link
-            href="/login?redirect=/scan"
-            className="inline-flex items-center gap-1 p-2 rounded-lg bg-emerald-700 text-white text-xs font-medium"
-          >
-            <Camera className="w-4 h-4" />
-          </Link>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"

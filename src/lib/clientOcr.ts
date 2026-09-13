@@ -159,31 +159,42 @@ export async function runBrowserOcr(
 
   let worker: any = null;
   try {
-    worker = await createWorker("eng", 1, {
-      logger: (m: any) => {
-        if (!onProgress) return;
-        const progress = Math.min(100, Math.max(0, Math.round((m.progress || 0) * 100)));
+    // 20-second safety timeout so browser worker never hangs indefinitely
+    const ocrPromise = (async () => {
+      worker = await createWorker("eng", 1, {
+        logger: (m: any) => {
+          if (!onProgress) return;
+          const progress = Math.min(100, Math.max(0, Math.round((m.progress || 0) * 100)));
 
-        if (m.status === "recognizing text") {
-          onProgress("Reading packaging typography...", 40 + Math.round(progress * 0.55));
-        } else if (m.status === "loading language traineddata") {
-          onProgress("Downloading dictionary models...", 15 + Math.round(progress * 0.2));
-        } else if (m.status === "initializing api") {
-          onProgress("Calibrating optical filters...", 35);
-        } else if (m.status) {
-          onProgress(m.status, 25);
-        }
-      },
+          if (m.status === "recognizing text") {
+            onProgress("Reading packaging typography...", 40 + Math.round(progress * 0.55));
+          } else if (m.status === "loading language traineddata") {
+            onProgress("Downloading dictionary models...", 15 + Math.round(progress * 0.2));
+          } else if (m.status === "initializing api") {
+            onProgress("Calibrating optical filters...", 35);
+          } else if (m.status) {
+            onProgress(m.status, 25);
+          }
+        },
+      });
+
+      onProgress?.("Scanning cosmetic ingredients...", 45);
+      const result = await worker.recognize(imageBlobOrUrl);
+
+      const rawText = result?.data?.text || "";
+      const confidence = Math.round(result?.data?.confidence || 0) / 100;
+
+      onProgress?.("Extraction complete!", 100);
+      return { rawText, confidence };
+    })();
+
+    const timeoutPromise = new Promise<{ rawText: string; confidence: number }>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("OCR engine timed out. The image may be too low-contrast or fine-print. Please capture closer or use Enter Manually."));
+      }, 20000);
     });
 
-    onProgress?.("Scanning cosmetic ingredients...", 45);
-    const result = await worker.recognize(imageBlobOrUrl);
-
-    const rawText = result?.data?.text || "";
-    const confidence = Math.round(result?.data?.confidence || 0) / 100;
-
-    onProgress?.("Extraction complete!", 100);
-    return { rawText, confidence };
+    return await Promise.race([ocrPromise, timeoutPromise]);
   } finally {
     if (worker) {
       try {

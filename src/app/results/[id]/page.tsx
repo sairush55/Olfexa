@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -14,11 +14,13 @@ import {
   AlertTriangle, 
   ShieldAlert, 
   SlidersHorizontal,
-  Bot
+  Bot,
+  Trash2
 } from "lucide-react";
 import { AnalysisResult, AnalyzedIngredient } from "@/types";
 import { MOCK_SCANS_LOOKUP, SAMPLE_SCAN_TRADITIONAL } from "@/data/mockScans";
-import { getScanById } from "@/lib/supabase/db";
+import { getScanById, deleteScan } from "@/lib/supabase/db";
+import { useAuth } from "@/context/AuthContext";
 import { AlcoholStatusBanner } from "@/components/results/AlcoholStatusBanner";
 import { MetricCard } from "@/components/results/MetricCard";
 import { IngredientCard } from "@/components/results/IngredientCard";
@@ -33,6 +35,8 @@ import { formatDate } from "@/lib/utils";
 
 export default function ResultsPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
   const id = (params?.id as string) || "demo";
 
   const [scanResult, setScanResult] = useState<AnalysisResult | null>(() => {
@@ -46,6 +50,7 @@ export default function ResultsPage() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [selectedAssistantIngredient, setSelectedAssistantIngredient] = useState<AnalyzedIngredient | undefined>(undefined);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -113,6 +118,22 @@ export default function ResultsPage() {
     }
   };
 
+  const handleDeleteThisScan = async () => {
+    if (!scanResult) return;
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(`Are you sure you want to delete "${scanResult.perfumeName}" from your scan history?`);
+      if (!confirmed) return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteScan(scanResult.id, user?.id);
+      router.push("/history");
+    } catch (err) {
+      console.warn("Failed to delete scan:", err);
+      setIsDeleting(false);
+    }
+  };
+
   // Filter ingredients
   const filteredIngredients = scanResult.ingredientsFound.filter((item) => {
     const matchSearch =
@@ -165,6 +186,16 @@ export default function ResultsPage() {
           >
             <Bot className="w-3.5 h-3.5" />
             <span>Ask AI Assistant</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteThisScan}
+            disabled={isDeleting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-card-bg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+            title="Delete this scanned report from history"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{isDeleting ? "Deleting..." : "Delete Scan"}</span>
           </button>
         </div>
       </div>

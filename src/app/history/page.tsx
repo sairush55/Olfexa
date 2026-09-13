@@ -55,9 +55,11 @@ export default function HistoryPage() {
     };
   }, [user?.id]);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDelete = async (id: string, perfumeName?: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(`Delete "${perfumeName || "this scan"}" from your history?`);
+      if (!confirmed) return;
+    }
     
     setDeletingId(id);
     // Optimistic removal from UI list
@@ -162,12 +164,14 @@ export default function HistoryPage() {
           </div>
         ) : (
           filtered.map((scan) => (
-            <Link
+            <div
               key={scan.id}
-              href={`/results/${scan.id}`}
-              className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs relative"
+              className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
             >
-              <div className="space-y-1 pr-12 sm:pr-0">
+              <Link
+                href={`/results/${scan.id}`}
+                className="space-y-1 flex-1 group focus:outline-none"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold font-editorial-heading text-slate-900 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                     {scan.perfumeName}
@@ -185,7 +189,7 @@ export default function HistoryPage() {
                   <span>•</span>
                   <span>Transparency: {scan.transparencyRating}</span>
                 </div>
-              </div>
+              </Link>
 
               <div className="flex items-center gap-3 self-end sm:self-center">
                 <span
@@ -198,21 +202,26 @@ export default function HistoryPage() {
                   {scan.alcoholStatus === "CONTAINS_ALCOHOL" ? "Contains Alcohol" : "No Alcohol"}
                 </span>
 
-                {/* Delete button */}
+                {/* Clear, dedicated Delete option */}
                 <button
                   type="button"
-                  onClick={(e) => handleDelete(e, scan.id)}
-                  title="Delete scan"
-                  className="p-2 rounded-lg border border-transparent hover:border-red-200 dark:hover:border-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  onClick={() => handleDelete(scan.id, scan.perfumeName)}
+                  title={`Delete ${scan.perfumeName} from history`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-red-300 dark:hover:border-red-900/60 bg-slate-50 dark:bg-slate-900/60 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 text-xs font-semibold tracking-wide transition-all shadow-xs"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
                 </button>
 
-                <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+                <Link
+                  href={`/results/${scan.id}`}
+                  title="View full report"
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-700 hover:text-white transition-colors"
+                >
                   <ArrowRight className="w-4 h-4" />
-                </div>
+                </Link>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

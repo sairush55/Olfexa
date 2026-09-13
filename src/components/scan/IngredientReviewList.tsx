@@ -191,7 +191,29 @@ export const IngredientReviewList: React.FC<IngredientReviewListProps> = ({
     const result = analyzeIngredientsList(selectedTokens, perfumeName, brandName);
     result.imageUrl = imageUrl;
     if (provenance) {
-      result.provenance = provenance;
+      result.provenance = {
+        ...provenance,
+        categorized: {
+          ingredients: items.filter((i) => i.selected).map((i) => ({
+            name: i.name,
+            confidence: i.confidence,
+            needsReview: i.needsReview,
+            rawDetected: i.rawDetected,
+          })),
+          mfg: provenance.manufacturingInfo,
+          mfgBy: {
+            brandName: provenance.companyDetails?.brandName,
+            manufacturer: provenance.companyDetails?.manufacturer,
+            distributor: provenance.companyDetails?.distributor,
+            fullAddress: provenance.companyAddress?.fullAddress,
+            countryOfOrigin: provenance.companyAddress?.countryOfOrigin,
+            responsiblePersonEU: provenance.companyAddress?.responsiblePersonEU,
+          },
+          others: provenance.others || {
+            fragranceType: provenance.fragranceType,
+          },
+        },
+      };
     }
 
     try {

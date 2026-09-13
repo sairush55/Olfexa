@@ -10,10 +10,16 @@ import {
   Calendar, 
   Building2, 
   MapPin, 
-  PackageCheck,
-  ShieldAlert,
-  Clock,
-  Edit3
+  PackageCheck, 
+  ShieldAlert, 
+  Clock, 
+  Edit3,
+  Layers,
+  Flame,
+  Barcode,
+  Globe,
+  Sliders,
+  Sparkles
 } from "lucide-react";
 import { IngredientReviewList } from "@/components/scan/IngredientReviewList";
 import { PackagingProvenance, ExtractedOcrIngredient } from "@/types";
@@ -49,6 +55,13 @@ const DEFAULT_PROVENANCE: PackagingProvenance = {
     countryOfOrigin: "France",
     fullAddress: "33 Avenue Hoche, 75008 Paris, France",
     responsiblePersonEU: "Cosmetic Regulatory Services EU"
+  },
+  others: {
+    fragranceType: "Eau de Parfum",
+    volume: "100 ml / 3.4 FL. OZ.",
+    alcoholVol: "80% VOL.",
+    safetyWarnings: ["Flammable: Keep away from open flame", "For external use only"],
+    barcodeRef: "3145891255301"
   }
 };
 
@@ -108,6 +121,7 @@ export default function ReviewPage() {
             manufacturingInfo: { ...prev.manufacturingInfo, ...(parsedProv.manufacturingInfo || {}) },
             companyDetails: { ...prev.companyDetails, ...(parsedProv.companyDetails || {}) },
             companyAddress: { ...prev.companyAddress, ...(parsedProv.companyAddress || {}) },
+            others: { ...prev.others, ...(parsedProv.others || {}) },
           }));
         } catch {
           // fallback
@@ -243,6 +257,49 @@ export default function ReviewPage() {
         </div>
       </div>
 
+      {/* 4-Category Optical Detection Status Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+        <div className="p-3.5 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
+          <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-bold uppercase text-[10px] mb-1">
+            <PackageCheck className="w-3.5 h-3.5" />
+            <span>1. INCI Ingredients</span>
+          </div>
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+            {ingredients.length} declared constituents
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg">
+          <div className="flex items-center gap-1.5 text-slate-500 font-bold uppercase text-[10px] mb-1">
+            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+            <span>2. Manufacturing (MFG)</span>
+          </div>
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
+            {provenance.manufacturingInfo.batchCode ? `Batch ${provenance.manufacturingInfo.batchCode}` : provenance.manufacturingInfo.dateOfManufacture || "Detected"}
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg">
+          <div className="flex items-center gap-1.5 text-slate-500 font-bold uppercase text-[10px] mb-1">
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>3. Manufacturer (MFG By)</span>
+          </div>
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
+            {provenance.companyDetails.manufacturer || provenance.companyDetails.brandName || provenance.companyAddress.countryOfOrigin || "Detected"}
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg">
+          <div className="flex items-center gap-1.5 text-slate-500 font-bold uppercase text-[10px] mb-1">
+            <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+            <span>4. Other Specs</span>
+          </div>
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate block">
+            {provenance.others?.volume || provenance.others?.alcoholVol || provenance.fragranceType || "Detected"}
+          </span>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Column: Packaging Provenance & Extraction Details */}
         <div className="w-full lg:w-1/3 space-y-4">
@@ -277,19 +334,19 @@ export default function ReviewPage() {
             )}
           </div>
 
-          {/* Extracted Date of Manufacture & Batch Code */}
+          {/* Category 2: Extracted Date of Manufacture & Batch Code (MFG) */}
           <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                Manufacturing & Batch
+                2. Manufacturing (MFG)
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
               <div>
                 <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Date of Manufacture
+                  Date of Manufacture (DOM)
                 </label>
                 <input
                   type="text"
@@ -335,31 +392,79 @@ export default function ReviewPage() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Expiry Date / Best Before
+                </label>
+                <input
+                  type="text"
+                  value={provenance.manufacturingInfo.expiryDate || ""}
+                  onChange={(e) => setProvenance((prev) => ({
+                    ...prev,
+                    manufacturingInfo: { ...prev.manufacturingInfo, expiryDate: e.target.value }
+                  }))}
+                  placeholder="e.g. 2028-05"
+                  className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Extracted Company Details & Address */}
+          {/* Category 3: Extracted Company Details & Address (MFG BY) */}
           <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                Company & Origin Address
+                3. Manufacturer (MFG By)
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
               <div>
                 <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
-                  Manufacturer / House
+                  Brand House / Label
                 </label>
                 <input
                   type="text"
-                  value={provenance.companyDetails.manufacturer || provenance.companyDetails.brandName || ""}
+                  value={provenance.companyDetails.brandName || brandName || ""}
+                  onChange={(e) => setProvenance((prev) => ({
+                    ...prev,
+                    companyDetails: { ...prev.companyDetails, brandName: e.target.value }
+                  }))}
+                  placeholder="e.g. Maison de L'Arôme"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Manufacturer / Formulator
+                </label>
+                <input
+                  type="text"
+                  value={provenance.companyDetails.manufacturer || ""}
                   onChange={(e) => setProvenance((prev) => ({
                     ...prev,
                     companyDetails: { ...prev.companyDetails, manufacturer: e.target.value }
                   }))}
                   placeholder="e.g. Parfums de France S.A."
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Distributor
+                </label>
+                <input
+                  type="text"
+                  value={provenance.companyDetails.distributor || ""}
+                  onChange={(e) => setProvenance((prev) => ({
+                    ...prev,
+                    companyDetails: { ...prev.companyDetails, distributor: e.target.value }
+                  }))}
+                  placeholder="e.g. L'Arôme International"
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
@@ -395,13 +500,142 @@ export default function ReviewPage() {
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                 />
               </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  EU Responsible Person (RP)
+                </label>
+                <input
+                  type="text"
+                  value={provenance.companyAddress.responsiblePersonEU || ""}
+                  onChange={(e) => setProvenance((prev) => ({
+                    ...prev,
+                    companyAddress: { ...prev.companyAddress, responsiblePersonEU: e.target.value }
+                  }))}
+                  placeholder="e.g. Cosmetic Regulatory Services EU"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Category 4: Other Packaging Specs (Others) */}
+          <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs space-y-3">
+            <div className="flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                4. Other Packaging Specs
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                    Net Volume
+                  </label>
+                  <input
+                    type="text"
+                    value={provenance.others?.volume || ""}
+                    onChange={(e) => setProvenance((prev) => ({
+                      ...prev,
+                      others: { ...prev.others, volume: e.target.value }
+                    }))}
+                    placeholder="e.g. 100 ml / 3.4 FL. OZ."
+                    className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                    Alcohol % by Vol
+                  </label>
+                  <input
+                    type="text"
+                    value={provenance.others?.alcoholVol || ""}
+                    onChange={(e) => setProvenance((prev) => ({
+                      ...prev,
+                      others: { ...prev.others, alcoholVol: e.target.value }
+                    }))}
+                    placeholder="e.g. 80% VOL."
+                    className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Concentration / Fragrance Type
+                </label>
+                <input
+                  type="text"
+                  value={provenance.others?.fragranceType || provenance.fragranceType || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setProvenance((prev) => ({
+                      ...prev,
+                      fragranceType: val,
+                      others: { ...prev.others, fragranceType: val }
+                    }));
+                  }}
+                  placeholder="e.g. Eau de Parfum"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Safety / Flammability Warnings
+                </label>
+                <input
+                  type="text"
+                  value={provenance.others?.safetyWarnings?.join(", ") || ""}
+                  onChange={(e) => {
+                    const warnings = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                    setProvenance((prev) => ({
+                      ...prev,
+                      others: { ...prev.others, safetyWarnings: warnings }
+                    }));
+                  }}
+                  placeholder="e.g. Flammable, For external use only"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-0.5">
+                  Barcode / Art Ref
+                </label>
+                <input
+                  type="text"
+                  value={provenance.others?.barcodeRef || ""}
+                  onChange={(e) => setProvenance((prev) => ({
+                    ...prev,
+                    others: { ...prev.others, barcodeRef: e.target.value }
+                  }))}
+                  placeholder="e.g. 3145891255301"
+                  className="w-full text-xs font-mono px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Interactive Ingredient Review & Final Analysis Trigger */}
+        {/* Right Column: Category 1 - Interactive Ingredient Review & Final Analysis Trigger */}
         <div className="w-full lg:w-2/3">
           <div className="p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <PackageCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 font-editorial-heading">
+                  1. INCI Ingredients List
+                </h3>
+                <p className="text-[11px] text-slate-500 font-mono">
+                  Inspect detected cosmetic ingredients, verify spelling, and toggle items before evidence analysis.
+                </p>
+              </div>
+            </div>
+
             <IngredientReviewList
               initialIngredients={ingredients}
               detailedIngredients={detailedIngredients}

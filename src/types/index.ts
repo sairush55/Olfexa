@@ -111,6 +111,37 @@ export interface ProductRelevanceAssessment {
   rationale: string;
 }
 
+export interface OcrManufacturingInfo {
+  dateOfManufacture?: string;
+  batchCode?: string;
+  periodAfterOpening?: string;
+  expiryDate?: string;
+}
+
+export interface OcrManufacturerInfo {
+  brandName?: string;
+  manufacturer?: string;
+  distributor?: string;
+  fullAddress?: string;
+  countryOfOrigin?: string;
+  responsiblePersonEU?: string;
+}
+
+export interface OcrOtherSpecs {
+  fragranceType?: string;
+  volume?: string;
+  alcoholVol?: string;
+  safetyWarnings?: string[];
+  barcodeRef?: string;
+}
+
+export interface CategorizedOcrExtraction {
+  ingredients: ExtractedOcrIngredient[];
+  mfg: OcrManufacturingInfo;
+  mfgBy: OcrManufacturerInfo;
+  others: OcrOtherSpecs;
+}
+
 export interface PackagingProvenance {
   isPerfume: boolean;
   fragranceType?: string;
@@ -118,12 +149,7 @@ export interface PackagingProvenance {
   detectionReason: string;
   imageQuality?: ImageQualityAssessment;
   relevance?: ProductRelevanceAssessment;
-  manufacturingInfo: {
-    dateOfManufacture?: string;
-    batchCode?: string;
-    periodAfterOpening?: string;
-    expiryDate?: string;
-  };
+  manufacturingInfo: OcrManufacturingInfo;
   companyDetails: {
     brandName?: string;
     manufacturer?: string;
@@ -134,6 +160,8 @@ export interface PackagingProvenance {
     countryOfOrigin?: string;
     responsiblePersonEU?: string;
   };
+  others?: OcrOtherSpecs;
+  categorized?: CategorizedOcrExtraction;
 }
 
 export interface StructuredOcrExtraction {
@@ -145,12 +173,7 @@ export interface StructuredOcrExtraction {
   candidates: string[];
   imageQuality?: ImageQualityAssessment;
   relevance?: ProductRelevanceAssessment;
-  manufacturingInfo: {
-    dateOfManufacture?: string;
-    batchCode?: string;
-    periodAfterOpening?: string;
-    expiryDate?: string;
-  };
+  manufacturingInfo: OcrManufacturingInfo;
   companyDetails: {
     brandName?: string;
     manufacturer?: string;
@@ -161,6 +184,8 @@ export interface StructuredOcrExtraction {
     countryOfOrigin?: string;
     responsiblePersonEU?: string;
   };
+  others?: OcrOtherSpecs;
+  categorized?: CategorizedOcrExtraction;
 }
 
 export interface AnalysisResult {
@@ -257,12 +282,7 @@ export interface VisionOcrResponse {
   overallConfidence: number;
   status: VisionOcrStatus;
   message?: string;
-  manufacturingInfo?: {
-    dateOfManufacture?: string;
-    batchCode?: string;
-    periodAfterOpening?: string;
-    expiryDate?: string;
-  };
+  manufacturingInfo?: OcrManufacturingInfo;
   companyDetails?: {
     brandName?: string;
     manufacturer?: string;
@@ -273,6 +293,8 @@ export interface VisionOcrResponse {
     countryOfOrigin?: string;
     responsiblePersonEU?: string;
   };
+  others?: OcrOtherSpecs;
+  categorized?: CategorizedOcrExtraction;
 }
 
 // ==============================================================================

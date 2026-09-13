@@ -156,6 +156,82 @@ export async function getScanById(id: string): Promise<AnalysisResult | null> {
 }
 
 /**
+ * Deletes a scan from Supabase (if configured and authenticated) and local browser storage.
+ */
+export async function deleteScan(id: string, userId?: string | null): Promise<boolean> {
+  // 1. Remove from local browser cache & storage
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(`olfexa_scan_${id}`);
+
+      const localHistoryKey = "olfexa_local_scans";
+      const existingRaw = localStorage.getItem(localHistoryKey);
+      if (existingRaw) {
+        const existing: ScanHistoryItem[] = JSON.parse(existingRaw);
+        const filtered = existing.filter((s) => s.id !== id);
+        localStorage.setItem(localHistoryKey, JSON.stringify(filtered));
+      }
+
+      // Track deleted mock IDs so deleted initial examples don't re-appear
+      const deletedMockKey = "olfexa_deleted_mock_scans";
+      const deletedMocksRaw = localStorage.getItem(deletedMockKey);
+      const deletedMocks: string[] = deletedMocksRaw ? JSON.parse(deletedMocksRaw) : [];
+      if (!deletedMocks.includes(id)) {
+        deletedMocks.push(id);
+        localStorage.setItem(deletedMockKey, JSON.stringify(deletedMocks));
+      }
+    } catch (e) {
+      console.warn("Error deleting local scan:", e);
+    }
+  }
+
+  // 2. Delete from Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      let query = supabase.from("scans").delete().eq("id", id);
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+      const { error } = await query;
+      if (error) {
+        console.warn("Supabase scan deletion error:", error);
+      }
+    } catch (err) {
+      console.warn("Failed to delete scan from Supabase:", err);
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Clears all scans for the user from Supabase and local storage.
+ */
+export async function clearAllScans(userId?: string | null): Promise<boolean> {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("olfexa_local_scans");
+      localStorage.setItem("olfexa_clear_mock_scans", "true");
+    } catch (e) {
+      console.warn("Error clearing local scans:", e);
+    }
+  }
+
+  if (isSupabaseConfigured() && userId) {
+    try {
+      const { error } = await supabase.from("scans").delete().eq("user_id", userId);
+      if (error) {
+        console.warn("Supabase clear all scans error:", error);
+      }
+    } catch (err) {
+      console.warn("Failed to clear scans from Supabase:", err);
+    }
+  }
+
+  return true;
+}
+
+/**
  * Loads the user's personal ingredient watchlist from Supabase or local storage.
  */
 export async function getWatchlist(userId?: string | null): Promise<WatchlistItem[]> {

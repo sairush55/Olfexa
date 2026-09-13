@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
         manufacturingInfo: pipelineResult.manufacturingInfo,
         companyDetails: pipelineResult.companyDetails,
         companyAddress: pipelineResult.companyAddress,
+        others: pipelineResult.others,
+        categorized: pipelineResult.categorized,
         actionableGuidance: pipelineResult.imageQuality.actionableGuidance || pipelineResult.ingredientList.guidanceMessage
       });
     }
@@ -117,6 +119,8 @@ export async function POST(req: NextRequest) {
         manufacturingInfo: pipelineResult.manufacturingInfo || ocrResult.manufacturingInfo,
         companyDetails: pipelineResult.companyDetails || ocrResult.companyDetails,
         companyAddress: pipelineResult.companyAddress || ocrResult.companyAddress,
+        others: pipelineResult.others || ocrResult.others,
+        categorized: pipelineResult.categorized || ocrResult.categorized,
         actionableGuidance: pipelineResult.imageQuality.actionableGuidance || pipelineResult.ingredientList.guidanceMessage
       });
     } catch (ocrErr: any) {

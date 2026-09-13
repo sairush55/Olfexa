@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { History, Search, ArrowRight, Camera, Database, Sparkles } from "lucide-react";
+import { History, Search, ArrowRight, Camera, Database, Sparkles, Trash2 } from "lucide-react";
 import { INITIAL_SCAN_HISTORY } from "@/data/mockScans";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { getUserScans } from "@/lib/supabase/db";
+import { getUserScans, deleteScan, clearAllScans } from "@/lib/supabase/db";
 import { ScanHistoryItem } from "@/types";
 
 export default function HistoryPage() {
@@ -15,6 +15,7 @@ export default function HistoryPage() {
   const [search, setSearch] = useState("");
   const [scans, setScans] = useState<ScanHistoryItem[]>(INITIAL_SCAN_HISTORY);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -24,16 +25,20 @@ export default function HistoryPage() {
       try {
         const userScans = await getUserScans(user?.id);
         if (isMounted) {
+          const isClearedAll = typeof window !== "undefined" && localStorage.getItem("olfexa_clear_mock_scans") === "true";
+          const deletedMocksRaw = typeof window !== "undefined" ? localStorage.getItem("olfexa_deleted_mock_scans") : null;
+          const deletedMocks: string[] = deletedMocksRaw ? JSON.parse(deletedMocksRaw) : [];
+          const visibleMocks = isClearedAll ? [] : INITIAL_SCAN_HISTORY.filter((s) => !deletedMocks.includes(s.id));
+
           if (userScans.length > 0) {
-            // Prepend user scans and include initial examples
             const existingIds = new Set(userScans.map((s) => s.id));
             const combined = [
               ...userScans,
-              ...INITIAL_SCAN_HISTORY.filter((s) => !existingIds.has(s.id)),
+              ...visibleMocks.filter((s) => !existingIds.has(s.id)),
             ];
             setScans(combined);
           } else {
-            setScans(INITIAL_SCAN_HISTORY);
+            setScans(visibleMocks);
           }
         }
       } catch (e) {
@@ -49,6 +54,36 @@ export default function HistoryPage() {
       isMounted = false;
     };
   }, [user?.id]);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setDeletingId(id);
+    // Optimistic removal from UI list
+    setScans((prev) => prev.filter((s) => s.id !== id));
+    
+    try {
+      await deleteScan(id, user?.id);
+    } catch (err) {
+      console.warn("Error deleting scan:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Are you sure you want to clear all archived scan reports?");
+      if (!confirmed) return;
+    }
+    setScans([]);
+    try {
+      await clearAllScans(user?.id);
+    } catch (err) {
+      console.warn("Error clearing all scans:", err);
+    }
+  };
 
   const filtered = scans.filter(
     (item) =>
@@ -80,13 +115,27 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <Link
-          href="/login?redirect=/scan"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold tracking-wide transition-all shadow-xs self-start sm:self-auto"
-        >
-          <Camera className="w-3.5 h-3.5" />
-          <span>New Scan</span>
-        </Link>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {scans.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-red-300 dark:hover:border-red-900/60 hover:bg-red-50/50 dark:hover:bg-red-950/20 text-slate-600 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-400 text-xs font-semibold tracking-wide transition-all shadow-xs"
+              title="Clear all scans from history"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear All</span>
+            </button>
+          )}
+
+          <Link
+            href="/scan"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold tracking-wide transition-all shadow-xs"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>New Scan</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search Filter */}
@@ -116,9 +165,9 @@ export default function HistoryPage() {
             <Link
               key={scan.id}
               href={`/results/${scan.id}`}
-              className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs"
+              className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs relative"
             >
-              <div className="space-y-1">
+              <div className="space-y-1 pr-12 sm:pr-0">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold font-editorial-heading text-slate-900 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                     {scan.perfumeName}
@@ -148,6 +197,16 @@ export default function HistoryPage() {
                 >
                   {scan.alcoholStatus === "CONTAINS_ALCOHOL" ? "Contains Alcohol" : "No Alcohol"}
                 </span>
+
+                {/* Delete button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleDelete(e, scan.id)}
+                  title="Delete scan"
+                  className="p-2 rounded-lg border border-transparent hover:border-red-200 dark:hover:border-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
 
                 <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-emerald-700 group-hover:text-white transition-colors">
                   <ArrowRight className="w-4 h-4" />

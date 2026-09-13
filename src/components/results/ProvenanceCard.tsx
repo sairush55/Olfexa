@@ -10,7 +10,9 @@ import {
   Barcode, 
   Clock, 
   Globe, 
-  Sparkles
+  Sparkles,
+  Sliders,
+  Flame
 } from "lucide-react";
 import { PackagingProvenance } from "@/types";
 
@@ -30,7 +32,8 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
     detectionReason,
     manufacturingInfo,
     companyDetails,
-    companyAddress
+    companyAddress,
+    others
   } = provenance;
 
   return (
@@ -85,24 +88,24 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
         <div className="flex items-center gap-3 text-slate-500">
           <span>Image Quality: <strong className="text-slate-800 dark:text-slate-200">{provenance.imageQuality?.rating || "HIGH"}</strong> ({provenance.imageQuality?.clarityScore || Math.round(confidence * 100)}% clarity)</span>
           <span>•</span>
-          <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Pre-Verified Pipeline</span>
+          <span className="text-emerald-700 dark:text-emerald-400 font-semibold">4 Distinct Detection Categories</span>
         </div>
       </div>
 
-      {/* Grid of 3 Pillars: Manufacturing, Company & House, Address & Origin */}
-      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800/80">
-        {/* Pillar 1: Date of Manufacture & Batch Codes */}
-        <div className="pt-4 md:pt-0 md:pr-6 space-y-3">
+      {/* 4 Pillars Grid: MFG, MFG By (Brand), MFG By (Origin), Others */}
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800/80">
+        {/* Pillar 1: Category 2 - Date of Manufacture & Batch Codes (MFG) */}
+        <div className="pt-4 lg:pt-0 lg:pr-4 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase font-mono tracking-wider">
             <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Manufacturing & Batch</span>
+            <span>2. Manufacturing (MFG)</span>
           </div>
 
           <div className="space-y-2.5 text-xs">
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="block text-[10px] font-mono text-slate-400 uppercase">Date of Manufacture (DOM)</span>
               <span className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
-                {manufacturingInfo?.dateOfManufacture || "Not declared / Unprinted"}
+                {manufacturingInfo?.dateOfManufacture || "Not declared"}
               </span>
             </div>
 
@@ -110,9 +113,9 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
               <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
                   <Barcode className="w-3 h-3" />
-                  <span>Batch Code</span>
+                  <span>Batch</span>
                 </div>
-                <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-xs">
+                <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-xs truncate block">
                   {manufacturingInfo?.batchCode || "None"}
                 </span>
               </div>
@@ -120,7 +123,7 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
               <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
                   <Clock className="w-3 h-3" />
-                  <span>PAO (Shelf)</span>
+                  <span>PAO</span>
                 </div>
                 <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-xs">
                   {manufacturingInfo?.periodAfterOpening || "36M"}
@@ -136,16 +139,16 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
           </div>
         </div>
 
-        {/* Pillar 2: Brand, Manufacturer, Distributor */}
-        <div className="pt-4 md:pt-0 md:px-6 space-y-3">
+        {/* Pillar 2: Category 3 - Brand, Manufacturer, Distributor (MFG By) */}
+        <div className="pt-4 lg:pt-0 lg:px-4 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase font-mono tracking-wider">
             <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Brand & Corporation</span>
+            <span>3. Manufacturer (MFG By)</span>
           </div>
 
           <div className="space-y-2.5 text-xs">
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-              <span className="block text-[10px] font-mono text-slate-400 uppercase">Fragrance Brand / House</span>
+              <span className="block text-[10px] font-mono text-slate-400 uppercase">Brand / House</span>
               <span className="font-semibold text-slate-900 dark:text-slate-100 font-editorial-heading text-sm">
                 {companyDetails?.brandName || "Declared Brand"}
               </span>
@@ -153,8 +156,8 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
 
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="block text-[10px] font-mono text-slate-400 uppercase">Manufacturer / Formulator</span>
-              <span className="text-slate-700 dark:text-slate-300 font-medium text-xs">
-                {companyDetails?.manufacturer || "Unspecified Packaging Entity"}
+              <span className="text-slate-700 dark:text-slate-300 font-medium text-xs truncate block">
+                {companyDetails?.manufacturer || "Unspecified Entity"}
               </span>
             </div>
 
@@ -167,11 +170,11 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
           </div>
         </div>
 
-        {/* Pillar 3: Corporate Address, Origin & Regulatory Officer */}
-        <div className="pt-4 md:pt-0 md:pl-6 space-y-3">
+        {/* Pillar 3: Category 3 continued - Corporate Address & Origin (MFG By) */}
+        <div className="pt-4 lg:pt-0 lg:px-4 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase font-mono tracking-wider">
             <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Address & Provenance</span>
+            <span>Origin & Compliance</span>
           </div>
 
           <div className="space-y-2.5 text-xs">
@@ -186,15 +189,59 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-              <span className="block text-[10px] font-mono text-slate-400 uppercase mb-0.5">Corporate / Facility Address</span>
-              <p className="text-slate-700 dark:text-slate-300 font-mono text-[11px] leading-relaxed">
+              <span className="block text-[10px] font-mono text-slate-400 uppercase mb-0.5">Corporate Address</span>
+              <p className="text-slate-700 dark:text-slate-300 font-mono text-[11px] leading-relaxed line-clamp-2">
                 {companyAddress?.fullAddress || "Unlisted corporate address"}
               </p>
             </div>
 
             {companyAddress?.responsiblePersonEU && (
-              <div className="text-[10px] font-mono text-slate-500">
+              <div className="text-[10px] font-mono text-slate-500 truncate">
                 RP (EU): <span className="text-slate-700 dark:text-slate-300 font-medium">{companyAddress.responsiblePersonEU}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pillar 4: Category 4 - Other Packaging Specs (Others) */}
+        <div className="pt-4 lg:pt-0 lg:pl-4 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase font-mono tracking-wider">
+            <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>4. Other Specs</span>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <span className="block text-[10px] font-mono text-slate-400 uppercase">Volume</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">
+                  {others?.volume || "100 ml"}
+                </span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <span className="block text-[10px] font-mono text-slate-400 uppercase">Alcohol Vol</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">
+                  {others?.alcoholVol || "Standard"}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase mb-0.5">
+                <Flame className="w-3 h-3 text-amber-600" />
+                <span>Safety Warnings</span>
+              </div>
+              <span className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed block">
+                {others?.safetyWarnings && others.safetyWarnings.length > 0
+                  ? others.safetyWarnings.join("; ")
+                  : "Standard cosmetic safety handling declared"}
+              </span>
+            </div>
+
+            {others?.barcodeRef && (
+              <div className="text-[10px] font-mono text-slate-500 truncate">
+                Ref/Barcode: <span className="text-slate-700 dark:text-slate-300 font-medium">{others.barcodeRef}</span>
               </div>
             )}
           </div>

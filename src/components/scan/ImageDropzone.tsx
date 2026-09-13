@@ -425,8 +425,15 @@ export const ImageDropzone: React.FC = () => {
             manufacturingInfo: provenanceData.manufacturingInfo || {},
             companyDetails: provenanceData.companyDetails || {},
             companyAddress: provenanceData.companyAddress || {},
+            others: provenanceData.others || {
+              fragranceType: provenanceData.fragranceType,
+            },
+            categorized: provenanceData.categorized || undefined,
           })
         );
+        if (provenanceData.categorized) {
+          sessionStorage.setItem("olfexa_review_categorized", JSON.stringify(provenanceData.categorized));
+        }
       }
     }
 

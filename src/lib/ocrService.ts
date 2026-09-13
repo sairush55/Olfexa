@@ -9,7 +9,11 @@ import {
   ProductRelevanceAssessment,
   VisionOcrResponse,
   ExtractedOcrIngredient,
-  VisionOcrStatus
+  VisionOcrStatus,
+  OcrManufacturingInfo,
+  OcrManufacturerInfo,
+  OcrOtherSpecs,
+  CategorizedOcrExtraction
 } from "@/types";
 import { 
   evaluateImageQuality, 
@@ -276,26 +280,40 @@ export async function processImageWithGeminiVision(
 
   const prompt = `You are an expert cosmetic formulation chemist and OCR vision specialist for OLFEXA.
 Analyze this cosmetic packaging / perfume bottle label image thoroughly.
-Extract the packaging text and return ONLY a valid, raw JSON object (no markdown, no backticks, no extra text) with this exact schema:
+Extract the packaging text and separate it strictly into 4 distinct categories. Return ONLY a valid, raw JSON object (no markdown, no backticks, no extra text) with this exact schema:
 {
   "isPerfume": boolean,
-  "fragranceType": "Eau de Parfum" | "Eau de Toilette" | "Extrait de Parfum" | "Eau de Cologne" | "Body Mist / Scent Mist" | "Cosmetic Formulation",
   "detectionReason": string,
-  "perfumeName": string | null,
-  "brandName": string | null,
-  "batchCode": string | null,
-  "dateOfManufacture": string | null,
-  "periodAfterOpening": string | null,
-  "countryOfOrigin": string | null,
-  "fullAddress": string | null,
   "rawText": string,
-  "ingredients": string[]
+  "ingredients": string[],
+  "mfg": {
+    "dateOfManufacture": string | null,
+    "batchCode": string | null,
+    "periodAfterOpening": string | null,
+    "expiryDate": string | null
+  },
+  "mfgBy": {
+    "brandName": string | null,
+    "manufacturer": string | null,
+    "distributor": string | null,
+    "fullAddress": string | null,
+    "countryOfOrigin": string | null,
+    "responsiblePersonEU": string | null
+  },
+  "others": {
+    "fragranceType": string | null,
+    "volume": string | null,
+    "alcoholVol": string | null,
+    "safetyWarnings": string[],
+    "barcodeRef": string | null
+  }
 }
 
-Rules for ingredients:
-- Extract EVERY declared INCI cosmetic ingredient listed after "INGREDIENTS:", "CONTIENT:", or "CONTAINS:".
-- Normalize each ingredient to uppercase INCI naming (e.g. "ALCOHOL DENAT.", "AQUA / WATER / EAU", "PARFUM / FRAGRANCE", "LIMONENE", "LINALOOL", "COUMARIN", "CITRONELLOL", "GERANIOL").
-- Do NOT include percentages, volume (e.g. 50ml, 80% vol), barcodes, or hazard warnings in the ingredients array.`;
+Rules for the 4 distinct categories:
+1. INGREDIENTS: Extract EVERY declared INCI cosmetic ingredient listed after "INGREDIENTS:", "CONTIENT:", or "CONTAINS:". Normalize to uppercase INCI naming (e.g. "ALCOHOL DENAT.", "AQUA / WATER / EAU", "PARFUM / FRAGRANCE", "LIMONENE", "LINALOOL", "COUMARIN", "CITRONELLOL", "GERANIOL"). DO NOT include MFG, company info, volume, or warnings here.
+2. MFG (Manufacturing): Extract Date of Manufacture (DOM/MFG), Batch/Lot code, PAO (Period After Opening e.g. 36M, 24M), and Expiry Date (EXP/Best Before).
+3. MFG BY (Manufacturer & Origin): Extract Brand name, Manufacturer, Distributor, Corporate / Registered Street Address, Country of Origin (e.g. "Made in France"), and EU Responsible Person (RP).
+4. OTHERS (Specifications & Warnings): Extract Fragrance Concentration (e.g. Eau de Parfum, Eau de Toilette), Net Volume (e.g. "100 ml / 3.4 FL. OZ."), Alcohol % by volume (e.g. "80% VOL."), flammability/safety warnings (e.g. ["FLAMMABLE", "FOR EXTERNAL USE ONLY"]), and barcode or reference number.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
@@ -346,27 +364,66 @@ Rules for ingredients:
   const imageQuality = assessImageQuality(imageBuffer, 0.98, parsed.rawText || "");
   const relevance = assessProductRelevance(parsed.rawText || refinedCandidates.join(", "));
 
+  const mfg: OcrManufacturingInfo = {
+    dateOfManufacture: parsed.mfg?.dateOfManufacture || parsed.dateOfManufacture || undefined,
+    batchCode: parsed.mfg?.batchCode || parsed.batchCode || undefined,
+    periodAfterOpening: parsed.mfg?.periodAfterOpening || parsed.periodAfterOpening || undefined,
+    expiryDate: parsed.mfg?.expiryDate || parsed.expiryDate || undefined,
+  };
+
+  const mfgBy: OcrManufacturerInfo = {
+    brandName: parsed.mfgBy?.brandName || parsed.brandName || undefined,
+    manufacturer: parsed.mfgBy?.manufacturer || parsed.manufacturer || undefined,
+    distributor: parsed.mfgBy?.distributor || parsed.distributor || undefined,
+    fullAddress: parsed.mfgBy?.fullAddress || parsed.fullAddress || undefined,
+    countryOfOrigin: parsed.mfgBy?.countryOfOrigin || parsed.countryOfOrigin || undefined,
+    responsiblePersonEU: parsed.mfgBy?.responsiblePersonEU || parsed.responsiblePersonEU || undefined,
+  };
+
+  const others: OcrOtherSpecs = {
+    fragranceType: parsed.others?.fragranceType || parsed.fragranceType || "Eau de Parfum",
+    volume: parsed.others?.volume || undefined,
+    alcoholVol: parsed.others?.alcoholVol || undefined,
+    safetyWarnings: Array.isArray(parsed.others?.safetyWarnings) ? parsed.others.safetyWarnings : [],
+    barcodeRef: parsed.others?.barcodeRef || undefined,
+  };
+
+  const ingredientEntities: ExtractedOcrIngredient[] = refinedCandidates.map((c: string) => ({
+    name: c,
+    confidence: 0.98,
+    needsReview: false,
+    rawDetected: c,
+  }));
+
+  const categorized: CategorizedOcrExtraction = {
+    ingredients: ingredientEntities,
+    mfg,
+    mfgBy,
+    others,
+  };
+
   return {
     isPerfume: parsed.isPerfume ?? relevance.isRelevant,
-    fragranceType: parsed.fragranceType || "Eau de Parfum",
+    fragranceType: others.fragranceType || "Eau de Parfum",
     detectionReason: parsed.detectionReason || relevance.rationale,
     confidence: 0.98,
     rawText: parsed.rawText || "",
     candidates: refinedCandidates,
     imageQuality,
     relevance,
-    manufacturingInfo: {
-      dateOfManufacture: parsed.dateOfManufacture || undefined,
-      batchCode: parsed.batchCode || undefined,
-      periodAfterOpening: parsed.periodAfterOpening || undefined,
-    },
+    manufacturingInfo: mfg,
     companyDetails: {
-      brandName: parsed.brandName || undefined,
+      brandName: mfgBy.brandName,
+      manufacturer: mfgBy.manufacturer,
+      distributor: mfgBy.distributor,
     },
     companyAddress: {
-      countryOfOrigin: parsed.countryOfOrigin || undefined,
-      fullAddress: parsed.fullAddress || undefined,
+      countryOfOrigin: mfgBy.countryOfOrigin,
+      fullAddress: mfgBy.fullAddress,
+      responsiblePersonEU: mfgBy.responsiblePersonEU,
     },
+    others,
+    categorized,
   };
 }
 
@@ -437,13 +494,13 @@ export function extractStructuredFragranceData(
 
   // 2. Extract Manufacturing & Batch Information
   let batchCode: string | undefined = undefined;
-  const batchMatch = text.match(/(?:BATCH|LOT|REF|CODE)\s*[:#.\-]?\s*([A-Z0-9]{3,12})/i);
+  const batchMatch = text.match(/(?:BATCH(?:\s*(?:NO|CODE|#))?|LOT(?:\s*(?:NO|CODE|#))?|REF\b|CODE\b)\s*[:#.\-]?[ \t]*([A-Z0-9\-_/]{3,16})/i);
   if (batchMatch && batchMatch[1]) {
     batchCode = batchMatch[1].toUpperCase();
   }
 
   let dateOfManufacture: string | undefined = undefined;
-  const mfgMatch = text.match(/(?:MFG|MFR|PROD|DOM|DATE|MANUFACTURED)\s*[:.\-]?\s*(\d{2}[/-]\d{2}[/-]\d{2,4}|\d{4}[/-]\d{2}[/-]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+\d{4})/i);
+  const mfgMatch = text.match(/(?:MFG|MFR|PROD|DOM|DATE|MANUFACTURED)\s*[:.\-]?\s*(\d{4}[/-]\d{2}(?:[/-]\d{2})?|\d{2}[/-]\d{2}(?:[/-]\d{2,4})?|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+\d{4})/i);
   if (mfgMatch && mfgMatch[1]) {
     dateOfManufacture = mfgMatch[1];
   }
@@ -455,7 +512,7 @@ export function extractStructuredFragranceData(
   }
 
   let expiryDate: string | undefined = undefined;
-  const expMatch = text.match(/(?:EXP|EXPIRY|BEST\s+BEFORE|USE\s+BY)\s*[:.\-]?\s*(\d{2}[/-]\d{2}[/-]\d{2,4}|\d{4}[/-]\d{2}[/-]\d{2}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+\d{4})/i);
+  const expMatch = text.match(/(?:EXP|EXPIRY|BEST\s+BEFORE|USE\s+BY)\s*[:.\-]?\s*(\d{4}[/-]\d{2}(?:[/-]\d{2})?|\d{2}[/-]\d{2}(?:[/-]\d{2,4})?|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+\d{4})/i);
   if (expMatch && expMatch[1]) {
     expiryDate = expMatch[1];
   }
@@ -504,8 +561,84 @@ export function extractStructuredFragranceData(
     responsiblePersonEU = rpMatch[1].trim();
   }
 
-  // 5. Extract Ingredients
+  // 5. Extract Others (Concentration, Net Volume, Alcohol % by Volume, Safety Warnings, Barcode)
+  let volume: string | undefined = undefined;
+  const volMatches = text.match(/\b\d{1,4}(?:\.\d+)?\s*(?:ML|FL\.?\s*OZ\.?)\b/gi);
+  if (volMatches && volMatches.length > 0) {
+    volume = Array.from(new Set(volMatches.map((v) => v.trim()))).join(" / ");
+  }
+
+  let alcoholVol: string | undefined = undefined;
+  const alcMatch = text.match(/\b(\d{1,2}(?:\.\d+)?\s*%\s*(?:VOL\.?|ALC\.?|VOLUME)?)\b/i);
+  if (alcMatch && alcMatch[1]) {
+    alcoholVol = alcMatch[1].toUpperCase();
+  }
+
+  const safetyWarnings: string[] = [];
+  if (/FLAMMABLE|INFLAMMABLE/i.test(text)) {
+    safetyWarnings.push("Flammable: Keep away from heat, open flame, or sparks");
+  }
+  if (/EXTERNAL\s+USE\s+ONLY/i.test(text)) {
+    safetyWarnings.push("For external use only");
+  }
+  if (/EYES/i.test(text) && /AVOID/i.test(text)) {
+    safetyWarnings.push("Avoid spraying in eyes");
+  }
+  if (/CHILDREN/i.test(text) && /REACH/i.test(text)) {
+    safetyWarnings.push("Keep out of reach of children");
+  }
+
+  let barcodeRef: string | undefined = undefined;
+  const barcodeMatch = text.match(/\b(\d{12,13})\b/);
+  if (barcodeMatch && barcodeMatch[1]) {
+    barcodeRef = barcodeMatch[1];
+  } else {
+    const refMatch = text.match(/(?:REF|ART)\.?\s*[:#\-]?\s*([A-Z0-9]{4,10})/i);
+    if (refMatch && refMatch[1]) {
+      barcodeRef = refMatch[1].toUpperCase();
+    }
+  }
+
+  // 6. Extract Ingredients (INCI formulation)
   const candidates = parseIngredientsFromOcrText(text);
+
+  const mfg: OcrManufacturingInfo = {
+    dateOfManufacture,
+    batchCode,
+    periodAfterOpening,
+    expiryDate,
+  };
+
+  const mfgBy: OcrManufacturerInfo = {
+    brandName,
+    manufacturer,
+    distributor,
+    fullAddress,
+    countryOfOrigin,
+    responsiblePersonEU,
+  };
+
+  const others: OcrOtherSpecs = {
+    fragranceType,
+    volume,
+    alcoholVol,
+    safetyWarnings: safetyWarnings.length > 0 ? safetyWarnings : undefined,
+    barcodeRef,
+  };
+
+  const ingredientEntities: ExtractedOcrIngredient[] = candidates.map((c) => ({
+    name: c,
+    confidence: 0.88,
+    needsReview: false,
+    rawDetected: c,
+  }));
+
+  const categorized: CategorizedOcrExtraction = {
+    ingredients: ingredientEntities,
+    mfg,
+    mfgBy,
+    others,
+  };
 
   return {
     isPerfume,
@@ -516,12 +649,7 @@ export function extractStructuredFragranceData(
     candidates,
     imageQuality,
     relevance,
-    manufacturingInfo: {
-      dateOfManufacture,
-      batchCode,
-      periodAfterOpening,
-      expiryDate,
-    },
+    manufacturingInfo: mfg,
     companyDetails: {
       brandName,
       manufacturer,
@@ -532,6 +660,8 @@ export function extractStructuredFragranceData(
       countryOfOrigin,
       responsiblePersonEU,
     },
+    others,
+    categorized,
   };
 }
 
@@ -737,8 +867,24 @@ export function evaluateVisionOcrPipeline(
     message = "Ingredients couldn't be read reliably from this image. Please ensure clear lighting and capture closer.";
   }
 
-  // Extract structured manufacturing info
+  // Extract structured manufacturing info & categorized groups
   const structured = extractStructuredFragranceData(rawText, confidence, imageBuffer);
+
+  const categorized: CategorizedOcrExtraction = {
+    ingredients: parsed.ingredients,
+    mfg: structured.manufacturingInfo,
+    mfgBy: {
+      brandName: structured.companyDetails.brandName,
+      manufacturer: structured.companyDetails.manufacturer,
+      distributor: structured.companyDetails.distributor,
+      fullAddress: structured.companyAddress.fullAddress,
+      countryOfOrigin: structured.companyAddress.countryOfOrigin,
+      responsiblePersonEU: structured.companyAddress.responsiblePersonEU,
+    },
+    others: structured.others || {
+      fragranceType: structured.fragranceType,
+    },
+  };
 
   return {
     productValidation,
@@ -751,6 +897,8 @@ export function evaluateVisionOcrPipeline(
     message,
     manufacturingInfo: structured.manufacturingInfo,
     companyDetails: structured.companyDetails,
-    companyAddress: structured.companyAddress
+    companyAddress: structured.companyAddress,
+    others: structured.others,
+    categorized,
   };
 }

@@ -99,6 +99,7 @@ export const ImageDropzone: React.FC = () => {
   const [enhancedPreviewUrl, setEnhancedPreviewUrl] = useState<string | null>(null);
   const [showEnhancedPreview, setShowEnhancedPreview] = useState(false);
   const [processedBlob, setProcessedBlob] = useState<Blob | null>(null);
+  const [opticalStatus, setOpticalStatus] = useState<{ isInverted: boolean; contrastBoosted: boolean } | null>(null);
 
   // Live camera mode
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -152,9 +153,14 @@ export const ImageDropzone: React.FC = () => {
       const processed = await preprocessImageForOcr(file);
       setProcessedBlob(processed.blob);
       setEnhancedPreviewUrl(processed.dataUrl);
+      setOpticalStatus({
+        isInverted: processed.isInverted,
+        contrastBoosted: processed.contrastBoosted,
+      });
     } catch (err) {
       console.warn("Image preprocessor fallback to raw file:", err);
       setProcessedBlob(file);
+      setOpticalStatus(null);
     }
   };
 
@@ -337,10 +343,27 @@ export const ImageDropzone: React.FC = () => {
           setProgressPercent(40);
 
           // Run in-browser WebAssembly OCR with real-time progress callbacks
-          const ocrResult = await runBrowserOcr(activeBlob, (step, percent) => {
+          let ocrResult = await runBrowserOcr(activeBlob, (step, percent) => {
             setProgressStep(step);
             setProgressPercent(Math.min(percent, 75));
           });
+
+          // Adaptive Optical Pass 2: If pass 1 produced sparse text or low confidence, automatically try the opposite polarity
+          if ((!ocrResult.rawText || ocrResult.rawText.trim().length < 35 || ocrResult.confidence < 0.6) && selectedFile) {
+            setProgressStep("Refining optical focus for fine cosmetic print...");
+            try {
+              const pass2 = await preprocessImageForOcr(selectedFile, {
+                forceInvert: !opticalStatus?.isInverted,
+                enableSharpening: true,
+              });
+              const pass2Result = await runBrowserOcr(pass2.blob);
+              if (pass2Result.rawText.length > ocrResult.rawText.length || pass2Result.confidence > ocrResult.confidence) {
+                ocrResult = pass2Result;
+              }
+            } catch {
+              // keep pass 1 result
+            }
+          }
 
           rawOcrText = ocrResult.rawText;
 
@@ -688,6 +711,22 @@ export const ImageDropzone: React.FC = () => {
                       Click to choose another photo or drop to replace
                     </span>
                   </div>
+
+                  {/* Optical Preprocessing Status Badges */}
+                  {opticalStatus && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                      {opticalStatus.isInverted && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700">
+                          Dark Box Polarity Inverted
+                        </span>
+                      )}
+                      {opticalStatus.contrastBoosted && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60">
+                          Contrast &amp; Edge Sharpened
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Contrast Enhancement Toggle */}
                   {enhancedPreviewUrl && (

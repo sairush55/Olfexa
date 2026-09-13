@@ -22,14 +22,107 @@ import {
   detectIngredientRegion 
 } from "./visionValidation";
 
-const OFFICIAL_INCI_NAMES = [
+export const EXPANDED_COSMETIC_INCI_DICTIONARY: string[] = [
   ...OLFEXA_DATASET.ingredients.map((i) => i.name.toUpperCase()),
-  "LIMONENE",
-  "OAKMOSS",
-  "WATER",
+  // Common cosmetic vehicles, carriers & solvents
   "ALCOHOL",
-  "FRAGRANCE"
+  "ALCOHOL DENAT.",
+  "SD ALCOHOL 40-B",
+  "ETHANOL",
+  "AQUA / WATER / EAU",
+  "AQUA / WATER",
+  "AQUA",
+  "WATER",
+  "PARFUM / FRAGRANCE",
+  "PARFUM",
+  "FRAGRANCE",
+  "GLYCERIN",
+  "PROPYLENE GLYCOL",
+  "DIPROPYLENE GLYCOL",
+  "BUTYLENE GLYCOL",
+  "TRIETHYL CITRATE",
+  "ISOPROPYL MYRISTATE",
+  "ISOPROPYL PALMITATE",
+  "CAPRYLIC/CAPRIC TRIGLYCERIDE",
+  
+  // Regulated Fragrance Allergens & Aromatic Synthetics (EU Annex III & IFRA)
+  "LIMONENE",
+  "LINALOOL",
+  "COUMARIN",
+  "CITRONELLOL",
+  "GERANIOL",
+  "CITRAL",
+  "EUGENOL",
+  "ISOEUGENOL",
+  "BENZYL BENZOATE",
+  "BENZYL SALICYLATE",
+  "BENZYL CINNAMATE",
+  "BENZYL ALCOHOL",
+  "HEXYL CINNAMAL",
+  "HYDROXYCITRONELLAL",
+  "ALPHA-ISOMETHYL IONONE",
+  "FARNESOL",
+  "CINNAMAL",
+  "CINNAMYL ALCOHOL",
+  "AMYL CINNAMAL",
+  "AMYLCINNAMYL ALCOHOL",
+  "ANISYL ALCOHOL",
+  "OAKMOSS",
+  "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT",
+  "EVERNIA PRUNASTRI EXTRACT",
+  "TREEMOSS",
+  "EVERNIA FURFURACEA (TREEMOSS) EXTRACT",
+  "EVERNIA FURFURACEA EXTRACT",
+  "METHYL 2-OCTYNOATE",
+  
+  // Antioxidants, UV Absorbers & Stabilizers
+  "BHT",
+  "BHA",
+  "TOCOPHEROL",
+  "TOCOPHERYL ACETATE",
+  "ETHYLHEXYL METHOXYCINNAMATE",
+  "BUTYL METHOXYDIBENZOYLMETHANE",
+  "ETHYLHEXYL SALICYLATE",
+  "HOMOSALATE",
+  "OCTOCRYLENE",
+  "BENZOPHENONE-1",
+  "BENZOPHENONE-2",
+  "BENZOPHENONE-3",
+  "BENZOPHENONE-4",
+  "PENTAERYTHRITYL TETRA-DI-T-BUTYL HYDROXYHYDROCINNAMATE",
+  "TRIS(TETRAMETHYLHYDROXYPIPERIDINOL) CITRATE",
+  "DISODIUM EDTA",
+  "CITRIC ACID",
+  "SODIUM HYDROXIDE",
+  
+  // Fatty alcohols, Emulsifiers, Texturizers
+  "CETYL ALCOHOL",
+  "STEARYL ALCOHOL",
+  "CETEARYL ALCOHOL",
+  "BEHENYL ALCOHOL",
+  "PPG-26-BUTETH-26",
+  "PEG-40 HYDROGENATED CASTOR OIL",
+  "POLYSORBATE 20",
+  "POLYSORBATE 80",
+  "DIMETHICONE",
+  "CYCLOPENTASILOXANE",
+  
+  // Colorants (CI indices)
+  "CI 19140 (YELLOW 5)",
+  "CI 19140",
+  "CI 14700 (RED 4)",
+  "CI 14700",
+  "CI 42090 (BLUE 1)",
+  "CI 42090",
+  "CI 60730 (EXT. VIOLET 2)",
+  "CI 60730",
+  "CI 17200 (RED 33)",
+  "CI 17200",
+  "CI 15985 (YELLOW 6)",
+  "CI 15985"
 ];
+
+const OFFICIAL_INCI_NAMES = Array.from(new Set(EXPANDED_COSMETIC_INCI_DICTIONARY));
 
 export function getImageDimensions(buffer: Buffer): { width: number; height: number; format: string } | null {
   if (!buffer || buffer.length < 24) return null;
@@ -218,14 +311,82 @@ export function findBestInciMatch(token: string): string {
     .replace(/[0]/g, "O")
     .replace(/[1!|]/g, "I")
     .replace(/\b8HT\b/g, "BHT")
+    .replace(/\bB\.H\.T\.\b/g, "BHT")
     .replace(/\bRN\b/g, "M")
+    .replace(/\bVV\b/g, "W")
+    .replace(/\s+/g, " ")
     .trim();
 
-  // Instant typo dictionary for common OCR errors
-  if (normalized === "LIMONNE") return "LIMONENE";
-  if (normalized === "LINALOL") return "LINALOOL";
-  if (normalized === "CITRONELL0L" || normalized === "CITRONELLOL") return "CITRONELLOL";
-  if (normalized === "COUMAR1N" || normalized === "COUMARIN") return "COUMARIN";
+  // 1. Instant Canonical Cosmetic Typo Map
+  const CANONICAL_TYPO_MAP: Record<string, string> = {
+    // Solvents / Carriers
+    "ALCOHOL DENAT": "ALCOHOL DENAT.",
+    "ALCOHOL DENATURE": "ALCOHOL DENAT.",
+    "ALCOHOL DENATURED": "ALCOHOL DENAT.",
+    "SD ALCOHOL": "SD ALCOHOL 40-B",
+    "SD ALCOHOL 40": "SD ALCOHOL 40-B",
+    "AQUA/WATER/EAU": "AQUA / WATER / EAU",
+    "AQUA / WATER": "AQUA / WATER / EAU",
+    "AQUA/WATER": "AQUA / WATER / EAU",
+    "AQUA (WATER)": "AQUA / WATER / EAU",
+    "AQUA(WATER)": "AQUA / WATER / EAU",
+    "PARFUM/FRAGRANCE": "PARFUM / FRAGRANCE",
+    "PARFUM (FRAGRANCE)": "PARFUM / FRAGRANCE",
+    "PARFUM(FRAGRANCE)": "PARFUM / FRAGRANCE",
+    "FRAGRANCE/PARFUM": "PARFUM / FRAGRANCE",
+    // Allergens & Aroma chemicals
+    "LIMONNE": "LIMONENE",
+    "LIMONNENE": "LIMONENE",
+    "LIMORNENE": "LIMONENE",
+    "L1MONENE": "LIMONENE",
+    "LINALOL": "LINALOOL",
+    "LINAL00L": "LINALOOL",
+    "LINALO0L": "LINALOOL",
+    "L1NALOOL": "LINALOOL",
+    "COUMAR1N": "COUMARIN",
+    "C0UMARIN": "COUMARIN",
+    "COUMARN": "COUMARIN",
+    "CITRONELL0L": "CITRONELLOL",
+    "CITRONELLOL": "CITRONELLOL",
+    "C1TRONELLOL": "CITRONELLOL",
+    "GERAN1OL": "GERANIOL",
+    "GERANI0L": "GERANIOL",
+    "CITR4L": "CITRAL",
+    "C1TRAL": "CITRAL",
+    "EUGEN0L": "EUGENOL",
+    "1SOEUGENOL": "ISOEUGENOL",
+    "ISOEUGEN0L": "ISOEUGENOL",
+    "BENZYL SAL1CYLATE": "BENZYL SALICYLATE",
+    "BENZYL SALCYLATE": "BENZYL SALICYLATE",
+    "HYDROXYCITRONELL4L": "HYDROXYCITRONELLAL",
+    "HYDROXYC1TRONELLAL": "HYDROXYCITRONELLAL",
+    "HYDROXYCITRONELL": "HYDROXYCITRONELLAL",
+    "HEXYL C1NNAMAL": "HEXYL CINNAMAL",
+    "HEXYL CINAMAL": "HEXYL CINNAMAL",
+    "ALPHA-ISOMETHYL ION0NE": "ALPHA-ISOMETHYL IONONE",
+    "ALPHA-1SOMETHYL 1ONONE": "ALPHA-ISOMETHYL IONONE",
+    "ALPHA ISOMETHYL IONONE": "ALPHA-ISOMETHYL IONONE",
+    "OAKM0SS": "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT",
+    "OAKMOSS EXTRACT": "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT",
+    "EVERNIA PRUNASTR1": "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT",
+    "EVERNIA PRUNASTRI": "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT",
+    "TREEMOSS EXTRACT": "EVERNIA FURFURACEA (TREEMOSS) EXTRACT",
+    "EVERNIA FURFURACEA": "EVERNIA FURFURACEA (TREEMOSS) EXTRACT",
+    // Stabilizers & Filters
+    "ETHYLHEXYL METHOXYC1NNAMATE": "ETHYLHEXYL METHOXYCINNAMATE",
+    "ETHYLHEXYL METHOXYCINAMATE": "ETHYLHEXYL METHOXYCINNAMATE",
+    "BUTYL METHOXYD1BENZOYLMETHANE": "BUTYL METHOXYDIBENZOYLMETHANE",
+    "ETHYLHEXYL SAL1CYLATE": "ETHYLHEXYL SALICYLATE",
+    "TOCOPHER0L": "TOCOPHEROL",
+    "DIPROPYLENE GLYC0L": "DIPROPYLENE GLYCOL",
+    "D1PROPYLENE GLYCOL": "DIPROPYLENE GLYCOL",
+    "ISOPROPYL MYR1STATE": "ISOPROPYL MYRISTATE",
+    "8HT": "BHT",
+  };
+
+  if (CANONICAL_TYPO_MAP[normalized]) {
+    return CANONICAL_TYPO_MAP[normalized];
+  }
 
   // Exact match
   if (OFFICIAL_INCI_NAMES.includes(normalized)) {
@@ -668,31 +829,48 @@ export function extractStructuredFragranceData(
 export function parseIngredientsFromOcrText(text: string): string[] {
   if (!text || text.trim().length === 0) return [];
 
-  // Filter non-ingredient packaging noise
+  // 1. Rejoin hyphenated words split across line breaks (e.g. ALPHA-\nISOMETHYL -> ALPHA-ISOMETHYL)
   let cleaned = text
+    .replace(/-\s*[\r\n]+\s*/g, "-")
     .replace(/\b\d{1,3}%\s*vol\b/gi, " ")
     .replace(/\b\d{1,4}\s*(ml|fl\.?\s*oz)\b/gi, " ")
     .replace(/\b(made in [a-z\s]+)\b/gi, " ")
     .replace(/\b(for external use only|keep out of reach|flammable|inflammable)\b/gi, " ")
     .replace(/\bhttps?:\/\/[^\s]+/gi, " ")
     .replace(/\bwww\.[^\s]+/gi, " ")
-    .replace(/[«»"[\]{}()]/g, " ");
+    .replace(/[«»"[\]{}]/g, " ");
 
-  const headerMatch = cleaned.match(/(?:INGREDIENTS|INGR[EÉ]DIENTS|CONTIENT|CONTAINS|COMPOSITION)\s*[:.\-]\s*([\s\S]+)/i);
+  // 2. Protect canonical dual-labeled cosmetic entities from delimiter splitting
+  cleaned = cleaned
+    .replace(/\bAQUA\s*[/]\s*WATER(?:\s*[/]\s*EAU)?\b/gi, "__CANONICAL_AQUA__")
+    .replace(/\bAQUA\s*\(\s*WATER(?:\s*[/]\s*EAU)?\s*\)\b/gi, "__CANONICAL_AQUA__")
+    .replace(/\bPARFUM\s*[/]\s*FRAGRANCE\b/gi, "__CANONICAL_PARFUM__")
+    .replace(/\bPARFUM\s*\(\s*FRAGRANCE\s*\)\b/gi, "__CANONICAL_PARFUM__")
+    .replace(/\bEVERNIA\s+PRUNASTRI\s*\(\s*OAKMOSS\s*\)\s*EXTRACT\b/gi, "__CANONICAL_OAKMOSS__")
+    .replace(/\bCAPRYLIC\s*[/]\s*CAPRIC\s+TRIGLYCERIDE\b/gi, "__CANONICAL_CAPRYLIC__");
+
+  const headerMatch = cleaned.match(/(?:INGREDIENTS?|INGR[EÉ]DIENTS?|INHALTSSTOFFE|CONTIENT|CONTAINS|COMPOSITION|INCI)\s*[:.\-\s]\s*([\s\S]+)/i);
   const hasExplicitHeader = Boolean(headerMatch && headerMatch[1]);
   if (hasExplicitHeader && headerMatch) {
     cleaned = headerMatch[1];
   }
 
   // End at common footer markers if present
-  const footerIdx = cleaned.search(/(?:MADE IN|FABRIQU|DISTRIBUTED BY|CAUTION|WARNING|BATCH|LOT|REF\.)/i);
+  const footerIdx = cleaned.search(/(?:MADE IN|FABRIQU|DISTRIBUTED BY|MANUFACTURED FOR|CAUTION|WARNING|ATTENTION|BATCH|LOT|REF\.|BARCODE|\b\d{12,13}\b)/i);
   if (footerIdx > 40) {
     cleaned = cleaned.substring(0, footerIdx);
   }
 
   const rawTokens = cleaned
     .split(/[,;•·|\n\r\t]+/)
-    .map((t) => t.replace(/[^a-zA-Z0-9\s\-'.()/]/g, "").trim())
+    .map((t) => {
+      let restored = t
+        .replace(/__CANONICAL_AQUA__/g, "AQUA / WATER / EAU")
+        .replace(/__CANONICAL_PARFUM__/g, "PARFUM / FRAGRANCE")
+        .replace(/__CANONICAL_OAKMOSS__/g, "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT")
+        .replace(/__CANONICAL_CAPRYLIC__/g, "CAPRYLIC/CAPRIC TRIGLYCERIDE");
+      return restored.replace(/[^a-zA-Z0-9\s\-'.()/]/g, "").trim();
+    })
     .filter((t) => t.length > 1 && !/^\d+$/.test(t));
 
   const refinedTokens: string[] = [];
@@ -734,30 +912,47 @@ export function parseIngredientsWithConfidence(text: string): {
   const region = detectIngredientRegion(text);
   const targetText = region.isolatedText || text;
 
-  // Filter non-ingredient packaging noise
+  // 1. Rejoin hyphenated words split across line breaks
   let cleaned = targetText
+    .replace(/-\s*[\r\n]+\s*/g, "-")
     .replace(/\b\d{1,3}%\s*vol\b/gi, " ")
     .replace(/\b\d{1,4}\s*(ml|fl\.?\s*oz)\b/gi, " ")
     .replace(/\b(made in [a-z\s]+)\b/gi, " ")
     .replace(/\b(for external use only|keep out of reach|flammable|inflammable)\b/gi, " ")
     .replace(/\bhttps?:\/\/[^\s]+/gi, " ")
     .replace(/\bwww\.[^\s]+/gi, " ")
-    .replace(/[«»"[\]{}()]/g, " ");
+    .replace(/[«»"[\]{}]/g, " ");
 
-  const headerMatch = cleaned.match(/(?:INGREDIENTS|INGR[EÉ]DIENTS|CONTIENT|CONTAINS|COMPOSITION)\s*[:.\-]\s*([\s\S]+)/i);
+  // 2. Protect canonical dual-labeled cosmetic entities
+  cleaned = cleaned
+    .replace(/\bAQUA\s*[/]\s*WATER(?:\s*[/]\s*EAU)?\b/gi, "__CANONICAL_AQUA__")
+    .replace(/\bAQUA\s*\(\s*WATER(?:\s*[/]\s*EAU)?\s*\)\b/gi, "__CANONICAL_AQUA__")
+    .replace(/\bPARFUM\s*[/]\s*FRAGRANCE\b/gi, "__CANONICAL_PARFUM__")
+    .replace(/\bPARFUM\s*\(\s*FRAGRANCE\s*\)\b/gi, "__CANONICAL_PARFUM__")
+    .replace(/\bEVERNIA\s+PRUNASTRI\s*\(\s*OAKMOSS\s*\)\s*EXTRACT\b/gi, "__CANONICAL_OAKMOSS__")
+    .replace(/\bCAPRYLIC\s*[/]\s*CAPRIC\s+TRIGLYCERIDE\b/gi, "__CANONICAL_CAPRYLIC__");
+
+  const headerMatch = cleaned.match(/(?:INGREDIENTS?|INGR[EÉ]DIENTS?|INHALTSSTOFFE|CONTIENT|CONTAINS|COMPOSITION|INCI)\s*[:.\-\s]\s*([\s\S]+)/i);
   const hasExplicitHeader = Boolean(headerMatch && headerMatch[1]);
   if (hasExplicitHeader && headerMatch) {
     cleaned = headerMatch[1];
   }
 
-  const footerIdx = cleaned.search(/(?:MADE IN|FABRIQU|DISTRIBUTED BY|CAUTION|WARNING|BATCH|LOT|REF\.)/i);
+  const footerIdx = cleaned.search(/(?:MADE IN|FABRIQU|DISTRIBUTED BY|MANUFACTURED FOR|CAUTION|WARNING|ATTENTION|BATCH|LOT|REF\.|BARCODE|\b\d{12,13}\b)/i);
   if (footerIdx > 40) {
     cleaned = cleaned.substring(0, footerIdx);
   }
 
   const rawTokens = cleaned
     .split(/[,;•·|\n\r\t]+/)
-    .map((t) => t.replace(/[^a-zA-Z0-9\s\-'.()/?*!_]/g, "").trim())
+    .map((t) => {
+      let restored = t
+        .replace(/__CANONICAL_AQUA__/g, "AQUA / WATER / EAU")
+        .replace(/__CANONICAL_PARFUM__/g, "PARFUM / FRAGRANCE")
+        .replace(/__CANONICAL_OAKMOSS__/g, "EVERNIA PRUNASTRI (OAKMOSS) EXTRACT")
+        .replace(/__CANONICAL_CAPRYLIC__/g, "CAPRYLIC/CAPRIC TRIGLYCERIDE");
+      return restored.replace(/[^a-zA-Z0-9\s\-'.()/?*!_]/g, "").trim();
+    })
     .filter((t) => t.length > 1 && !/^\d+$/.test(t));
 
   const ingredients: ExtractedOcrIngredient[] = [];
@@ -792,10 +987,10 @@ export function parseIngredientsWithConfidence(text: string): {
       confidence = 0.98;
       needsReview = false;
     } else if (isExact && dist <= 1) {
-      confidence = 0.88;
+      confidence = 0.90;
       needsReview = false;
     } else if (dist <= 2) {
-      confidence = 0.72;
+      confidence = 0.75;
       needsReview = true;
     } else {
       // Ingredient declared on packaging but unlisted in knowledge base

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
@@ -12,7 +12,13 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams?.get("redirect") || "/dashboard";
 
-  const { signUpWithEmail, isConfigured } = useAuth();
+  const { user, signUpWithEmail, isConfigured } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      router.replace(redirectTarget);
+    }
+  }, [user, redirectTarget, router]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");

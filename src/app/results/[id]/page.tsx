@@ -156,7 +156,7 @@ export default function ResultsPage() {
       {/* Top Navigation & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
-          href="/login?redirect=/scan"
+          href={user ? "/scan" : "/login?redirect=/scan"}
           className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

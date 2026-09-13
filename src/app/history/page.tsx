@@ -13,7 +13,24 @@ import { ScanHistoryItem } from "@/types";
 export default function HistoryPage() {
   const { user, isConfigured } = useAuth();
   const [search, setSearch] = useState("");
-  const [scans, setScans] = useState<ScanHistoryItem[]>(INITIAL_SCAN_HISTORY);
+  const [scans, setScans] = useState<ScanHistoryItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const isClearedAll = localStorage.getItem("olfexa_clear_mock_scans") === "true";
+        if (isClearedAll) return [];
+        const deletedMocksRaw = localStorage.getItem("olfexa_deleted_mock_scans");
+        const deletedMocks: string[] = deletedMocksRaw ? JSON.parse(deletedMocksRaw) : [];
+        const localScansRaw = localStorage.getItem("olfexa_local_scans");
+        const localScans: ScanHistoryItem[] = localScansRaw ? JSON.parse(localScansRaw) : [];
+        const visibleMocks = INITIAL_SCAN_HISTORY.filter((s) => !deletedMocks.includes(s.id));
+        const combined = [...localScans, ...visibleMocks.filter((m) => !localScans.some((l) => l.id === m.id))];
+        return combined.length > 0 ? combined : visibleMocks;
+      } catch {
+        return INITIAL_SCAN_HISTORY;
+      }
+    }
+    return INITIAL_SCAN_HISTORY;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -131,7 +148,7 @@ export default function HistoryPage() {
           )}
 
           <Link
-            href="/scan"
+            href={user ? "/scan" : "/login?redirect=/scan"}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold tracking-wide transition-all shadow-xs"
           >
             <Camera className="w-3.5 h-3.5" />

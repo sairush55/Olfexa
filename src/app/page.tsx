@@ -28,9 +28,11 @@ import {
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { findIngredientByInci } from "@/data/mockIngredients";
 import { OLFEXA_DATASET } from "@/data/olfexaDataset";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [instantSearch, setInstantSearch] = useState("");
   const [activeTabPreset, setActiveTabPreset] = useState<"edp" | "nonalc" | "oakmoss">("edp");
   const [activeHotspot, setActiveHotspot] = useState<string | null>("alcohol");
@@ -193,7 +195,7 @@ export default function LandingPage() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <Link
-                href="/login?redirect=/scan"
+                href={user ? "/scan" : "/login?redirect=/scan"}
                 className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-semibold tracking-wide shadow-md transition-all group"
               >
                 <Camera className="w-4 h-4" />
@@ -831,7 +833,7 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <Link
-              href="/login?redirect=/scan"
+              href={user ? "/scan" : "/login?redirect=/scan"}
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-semibold shadow-md transition-all"
             >
               <Camera className="w-4 h-4" />

@@ -21,20 +21,20 @@ import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
-const NAV_ITEMS = [
-  { href: "/login?redirect=/scan", label: "Scan Fragrance", icon: Camera },
-  { href: "/dashboard", label: "Dashboard", icon: User },
-  { href: "/compare", label: "Compare", icon: Layers },
-  { href: "/watchlist", label: "Watchlist", icon: Bookmark },
-  { href: "/ingredients", label: "Ingredients", icon: Compass },
-  { href: "/history", label: "History", icon: History },
-];
-
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { user, signOut, isConfigured } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const navItems = [
+    { href: user ? "/scan" : "/login?redirect=/scan", label: "Scan Fragrance", icon: Camera },
+    { href: "/dashboard", label: "Dashboard", icon: User },
+    { href: "/compare", label: "Compare", icon: Layers },
+    { href: "/watchlist", label: "Watchlist", icon: Bookmark },
+    { href: "/ingredients", label: "Ingredients", icon: Compass },
+    { href: "/history", label: "History", icon: History },
+  ];
 
   useEffect(() => {
     // Check saved theme or default to Day theme
@@ -67,7 +67,7 @@ export const Navbar: React.FC = () => {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href.includes("scan")
@@ -158,7 +158,7 @@ export const Navbar: React.FC = () => {
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
         <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-background px-4 pt-2 pb-6 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href.includes("scan")
@@ -211,7 +211,7 @@ export const Navbar: React.FC = () => {
                   Sign In / Account
                 </Link>
                 <Link
-                  href="/login?redirect=/scan"
+                  href={user ? "/scan" : "/login?redirect=/scan"}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="px-4 py-2 rounded-md bg-emerald-700 text-white text-xs font-medium"
                 >

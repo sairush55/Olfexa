@@ -12,10 +12,11 @@ import {
   User, 
   Menu, 
   X, 
-  Sun,
-  Moon,
-  LogOut,
-  Database
+  Sun, 
+  Moon, 
+  LogOut, 
+  Database,
+  HelpCircle
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -27,14 +28,19 @@ export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const navItems = [
-    { href: user ? "/scan" : "/login?redirect=/scan", label: "Scan Fragrance", icon: Camera },
-    { href: "/dashboard", label: "Dashboard", icon: User },
-    { href: "/compare", label: "Compare", icon: Layers },
-    { href: "/watchlist", label: "Watchlist", icon: Bookmark },
-    { href: "/ingredients", label: "Ingredients", icon: Compass },
-    { href: "/history", label: "History", icon: History },
-  ];
+  const navItems = user
+    ? [
+        { href: "/#how-it-works", label: "How It Works", icon: HelpCircle },
+        { href: "/scan", label: "Scan", icon: Camera },
+        { href: "/ingredients", label: "Explore", icon: Compass },
+        { href: "/dashboard", label: "Dashboard", icon: User },
+        { href: "/history", label: "History", icon: History },
+      ]
+    : [
+        { href: "/#how-it-works", label: "How It Works", icon: HelpCircle },
+        { href: "/login?redirect=/scan", label: "Scan", icon: Camera },
+        { href: "/ingredients", label: "Explore", icon: Compass },
+      ];
 
   useEffect(() => {
     // Check saved theme or default to Day theme
@@ -129,9 +135,9 @@ export const Navbar: React.FC = () => {
           ) : (
             <Link
               href="/login"
-              className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white px-2.5 py-1.5 font-medium transition-colors"
+              className="text-xs text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 px-3 py-1.5 font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-card-bg hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors shadow-2xs"
             >
-              Sign In
+              Login / Get Started
             </Link>
           )}
         </div>

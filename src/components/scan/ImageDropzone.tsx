@@ -385,15 +385,23 @@ export const ImageDropzone: React.FC = () => {
           const data = await res.json();
 
           if (!data.success) {
-            setRejectionStatus(data.status || "REJECTED");
-            setRejectionGuidance(data.actionableGuidance || data.message || "Please re-take photo following guidance.");
-            throw new Error(data.message || data.error || "Vision analysis rejected this image.");
+            if (data.candidates && data.candidates.length > 0) {
+              // Proceed with caution: candidate ingredients were detected, allow user verification on review screen
+              extracted = data.candidates;
+              detailedIngredients = data.ingredients || [];
+              rawOcrText = data.rawIngredientText || data.rawText || rawOcrText;
+              provenanceData = data;
+            } else {
+              setRejectionStatus(data.status || "REJECTED");
+              setRejectionGuidance(data.actionableGuidance || data.message || "Please hold camera steady and tap to focus on the ingredient box.");
+              throw new Error(data.message || data.error || "Vision analysis rejected this image.");
+            }
+          } else {
+            extracted = data.candidates || [];
+            detailedIngredients = data.ingredients || [];
+            rawOcrText = data.rawIngredientText || data.rawText || rawOcrText;
+            provenanceData = data;
           }
-
-          extracted = data.candidates || [];
-          detailedIngredients = data.ingredients || [];
-          rawOcrText = data.rawIngredientText || data.rawText || rawOcrText;
-          provenanceData = data;
         }
       } catch (err: any) {
         console.error("Scan processing error:", err);
@@ -557,37 +565,40 @@ export const ImageDropzone: React.FC = () => {
             <button
               type="button"
               onClick={() => {
+                setScanErrorMessage(null);
+                setRejectionStatus(null);
+                setRejectionGuidance(null);
+                if (fileInputRef.current) fileInputRef.current.click();
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold transition-colors shadow-2xs"
+            >
+              📸 Retake Clear Photo (Recommended)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 setActiveTab("manual");
                 setScanErrorMessage(null);
                 setRejectionStatus(null);
                 setRejectionGuidance(null);
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white text-[11px] font-semibold transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               ✍️ Enter Ingredients Manually
             </button>
             <button
               type="button"
               onClick={() => {
-                setScanErrorMessage(null);
-                setRejectionStatus(null);
-                setRejectionGuidance(null);
-                if (fileInputRef.current) fileInputRef.current.click();
-              }}
-              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
-            >
-              📸 Retake / Choose New Image
-            </button>
-            <button
-              type="button"
-              onClick={() => {
                 setShowApiKeyInput(true);
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px] font-medium hover:bg-amber-100/50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-mono text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
             >
-              🔑 Use Free AI Vision (Gemini Key)
+              (Optional) Advanced: Gemini AI Key
             </button>
           </div>
+          <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 pt-1">
+            * No API key is required. OLFEXA runs locally in your browser for free.
+          </p>
         </div>
       )}
 

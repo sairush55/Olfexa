@@ -62,7 +62,7 @@ export function evaluateImageQuality(
 
   // 4. Blur & Clarity Evaluation
   const clarityScore = Math.min(100, Math.max(10, Math.round(confidenceScore * 100)));
-  if (clarityScore < 60) {
+  if (clarityScore < 45) {
     isBlurry = true;
     issues.push("High blur or motion distortion detected.");
   }
@@ -71,7 +71,7 @@ export function evaluateImageQuality(
   if (extractedText.length > 20) {
     const alphanumeric = extractedText.replace(/[^a-zA-Z0-9\s,.-]/g, "").length;
     const ratio = alphanumeric / extractedText.length;
-    if (ratio < 0.60) {
+    if (ratio < 0.50) {
       isBlurry = true;
       issues.push("High optical noise ratio. Text clarity is compromised by glare or surface curvature.");
     }

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, Sparkles, Send, Bot, User, ShieldAlert } from "lucide-react";
 import { AnalyzedIngredient } from "@/types";
+import { generateGroundedAssistantResponse } from "@/lib/assistant/groundedAssistant";
 
 interface GroundedAssistantDrawerProps {
   isOpen: boolean;
@@ -66,46 +67,28 @@ export const GroundedAssistantDrawer: React.FC<GroundedAssistantDrawerProps> = (
     setInputQuery("");
     setIsTyping(true);
 
-    // Grounded synthesis based exclusively on the current analyzed ingredients
+    // Grounded synthesis using constrained assistant policy engine
     setTimeout(() => {
-      let reply = "";
-      const lowerQuery = query.toLowerCase();
-      const matched = ingredients.find(
-        (i) =>
-          (i.matchedInci && lowerQuery.includes(i.matchedInci.toLowerCase())) ||
-          (i.commonName && lowerQuery.includes(i.commonName.toLowerCase())) ||
-          lowerQuery.includes(i.rawInput.toLowerCase())
-      );
-
-      if (matched) {
-        reply = `Based on OLFEXA's verified knowledge base, **${matched.matchedInci || matched.rawInput}** is classified as a ${matched.category.replace("_", " ")}.\n\n` +
-          `• **Function**: ${matched.description}\n` +
-          `• **Regulatory Status**: ${matched.whyFlagged || "No active allergen restrictions under EU Annex III."}\n` +
-          `• **Potential Note**: ${matched.isEuAllergen ? "Known to pose sensitization potential for individuals with diagnosed contact allergies to fragrance compounds." : "Standard cosmetic carrier/stabilizer."}\n\n` +
-          `*Note: This explanation is based strictly on published regulatory standards (IFRA / EU SCCS) and is not a personalized medical diagnosis.*`;
-      } else if (lowerQuery.includes("alcohol")) {
-        const alcohols = ingredients.filter((i) => i.isAlcohol);
-        if (alcohols.length > 0) {
-          reply = `In "${perfumeName}", our structured evaluation detected: ${alcohols.map((a) => a.matchedInci || a.rawInput).join(", ")}. These act as volatile carrier solvents to facilitate fragrance diffusion, which can cause skin dryness on sensitized barriers. Fatty conditioning alcohols, if present, are non-drying lipids.`;
-        } else {
-          reply = `No recognized alcohol ingredient was detected in the provided ingredient list for "${perfumeName}".`;
-        }
-      } else if (lowerQuery.includes("safe") || lowerQuery.includes("harmful")) {
-        reply = `As a consumer decision-support platform, OLFEXA does not issue blanket claims such as "completely safe" or "harmful to everyone". Finished cosmetic safety is determined by personal tolerance, dermatological sensitivities, and adherence to IFRA concentration standards. We recommend reviewing flagged allergens if you have experienced contact dermatitis.`;
-      } else {
-        reply = `Regarding your query about "${perfumeName}": the formulation contains ${ingredients.length} declared ingredients, with ${ingredients.filter((i) => i.isEuAllergen).length} EU-notified fragrance allergens flagged. All data is grounded in published IFRA & EU cosmetic regulatory dossiers.`;
-      }
+      const groundedRes = generateGroundedAssistantResponse({
+        question: query,
+        context: {
+          perfumeName,
+          ingredients,
+        },
+        targetIngredient: initialIngredient
+      });
 
       setMessages((prev) => [
         ...prev,
         {
           id: `asst-${Date.now()}`,
           sender: "assistant",
-          text: reply,
+          text: groundedRes.answer,
+          citations: groundedRes.citedSources.map(s => s.organization),
         },
       ]);
       setIsTyping(false);
-    }, 600);
+    }, 400);
   };
 
   return (

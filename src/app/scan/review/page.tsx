@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { IngredientReviewList } from "@/components/scan/IngredientReviewList";
 import { PackagingProvenance, ExtractedOcrIngredient } from "@/types";
+import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 
 const DEFAULT_REVIEW_INGREDIENTS = [
   "ALCOHOL DENAT.",
@@ -789,6 +790,10 @@ export default function ReviewPage() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="pt-4">
+        <DisclaimerBanner variant="subtle" />
       </div>
     </div>
   );

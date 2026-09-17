@@ -3,20 +3,43 @@
 import React, { useState } from "react";
 import { Compass, Search, BookOpen, AlertTriangle, Droplet, ShieldAlert } from "lucide-react";
 import { MOCK_INGREDIENTS_DATABASE } from "@/data/mockIngredients";
+import { CANONICAL_INGREDIENTS_DATABASE } from "@/data/canonicalIngredientsDatabase";
 import { EvidenceDrawer } from "@/components/results/EvidenceDrawer";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { Ingredient } from "@/types";
+
+// Combined unified canonical and extended ingredients catalog
+const ALL_EXPLORER_INGREDIENTS: Ingredient[] = [
+  ...CANONICAL_INGREDIENTS_DATABASE.map((c) => ({
+    id: c.id,
+    inciName: c.inciName,
+    commonName: c.commonNames[0],
+    casNumber: c.casNumber,
+    category: c.category,
+    isAlcohol: c.isAlcohol,
+    alcoholType: c.alcoholType,
+    isEuAllergen: c.isEuAllergen,
+    isPotentialIrritant: c.isPotentialIrritant,
+    description: c.description,
+    evidence: c.evidence,
+  })),
+  ...MOCK_INGREDIENTS_DATABASE.filter(
+    (m) => !CANONICAL_INGREDIENTS_DATABASE.some((c) => c.inciName === m.inciName)
+  ),
+];
 
 export default function IngredientsExplorerPage() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [activeEvidenceIngredient, setActiveEvidenceIngredient] = useState<Ingredient | null>(null);
 
-  const filtered = MOCK_INGREDIENTS_DATABASE.filter((ing) => {
+  const filtered = ALL_EXPLORER_INGREDIENTS.filter((ing) => {
+    const q = search.toLowerCase();
     const matchSearch =
-      ing.inciName.toLowerCase().includes(search.toLowerCase()) ||
-      (ing.commonName && ing.commonName.toLowerCase().includes(search.toLowerCase())) ||
-      ing.description.toLowerCase().includes(search.toLowerCase());
+      ing.inciName.toLowerCase().includes(q) ||
+      (ing.commonName && ing.commonName.toLowerCase().includes(q)) ||
+      (ing.casNumber && ing.casNumber.toLowerCase().includes(q)) ||
+      ing.description.toLowerCase().includes(q);
 
     if (!matchSearch) return false;
 
@@ -97,6 +120,11 @@ export default function IngredientsExplorerPage() {
                   {ing.commonName && (
                     <span className="text-xs text-slate-500 block">
                       {ing.commonName}
+                    </span>
+                  )}
+                  {ing.casNumber && (
+                    <span className="text-[10px] font-mono text-slate-400 block">
+                      CAS: {ing.casNumber}
                     </span>
                   )}
                 </div>

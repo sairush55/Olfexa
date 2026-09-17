@@ -14,7 +14,8 @@
     "test:matching": "npx tsx scripts/test_matching_engine.ts",
     "test:evidence": "npx tsx scripts/test_evidence_layer.ts",
     "test:rules": "npx tsx scripts/test_deterministic_rule_engine.ts",
-    "test:assistant": "npx tsx scripts/test_grounded_assistant.ts"
+    "test:assistant": "npx tsx scripts/test_grounded_assistant.ts",
+    "test:features": "npx tsx scripts/test_user_features_suite.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

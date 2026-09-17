@@ -215,6 +215,29 @@ export interface AnalysisResult {
   imageQuality?: ImageQualityAssessment;
   relevance?: ProductRelevanceAssessment;
   suitabilityProfile?: SuitabilityProfile;
+  regionalCompliance?: {
+    eu: {
+      framework: string;
+      isCompliant: boolean;
+      mandatoryAllergenDeclarations: string[];
+      restrictions: string[];
+      officialUrl: string;
+    };
+    india: {
+      framework: string;
+      isCompliant: boolean;
+      standardsApplied: string[];
+      cdscoNotes: string[];
+      officialUrl: string;
+    };
+    usFda: {
+      framework: string;
+      isAlcoholFreePermitted: boolean;
+      claimsSummary: string;
+      mocraNotes: string[];
+      officialUrl: string;
+    };
+  };
 }
 
 // ==============================================================================

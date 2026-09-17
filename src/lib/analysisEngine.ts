@@ -10,6 +10,7 @@ import { findIngredientByInci } from "@/data/mockIngredients";
 import { matchIngredientToken } from "./matching-engine/matchingEngine";
 import { evaluateAlcoholPresence } from "./alcoholRules";
 import { generateSuitabilityProfile } from "./suitabilityEngine";
+import { executeDeterministicRuleEngine } from "./rule-engine/deterministicRuleEngine";
 
 export function analyzeIngredientsList(
   ingredients: string[],
@@ -180,6 +181,9 @@ export function analyzeIngredientsList(
     false
   );
 
+  // Evaluate Regional Compliance & Deterministic Safety Rules
+  const deterministicRules = executeDeterministicRuleEngine(ingredients);
+
   return {
     id: `scan-${Date.now()}`,
     perfumeName,
@@ -197,6 +201,7 @@ export function analyzeIngredientsList(
     transparencyNotes,
     fragranceFingerprint: fingerprint,
     suitabilityProfile,
+    regionalCompliance: deterministicRules.compliance,
     disclaimer: "OLFEXA provides ingredient-level evidence and informational classifications based on visible packaging labels. It does not replace professional dermatological or medical evaluation.",
   };
 }

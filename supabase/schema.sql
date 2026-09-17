@@ -129,3 +129,52 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 10. Ingredients Table (Canonical INCI Knowledge Base)
+create table if not exists public.ingredients (
+  id text primary key,
+  inci_name text not null unique,
+  common_names text[] default '{}',
+  synonyms text[] default '{}',
+  cas_number text,
+  ec_number text,
+  category text not null,
+  functions text[] default '{}',
+  is_alcohol boolean default false,
+  alcohol_type text,
+  is_eu_allergen boolean default false,
+  is_potential_irritant boolean default false,
+  description text not null,
+  potential_concerns text,
+  sources jsonb not null default '[]',
+  regional_regulations jsonb not null default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 11. Ingredient Evidence Table (Authoritative regulatory citations)
+create table if not exists public.ingredient_evidence (
+  id text primary key,
+  ingredient_id text references public.ingredients(id) on delete cascade,
+  organization text not null,
+  title text not null,
+  citation_url text,
+  publication_year integer,
+  key_findings text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_ingredients_inci_name on public.ingredients(inci_name);
+create index if not exists idx_ingredients_cas_number on public.ingredients(cas_number);
+create index if not exists idx_ingredient_evidence_ingredient_id on public.ingredient_evidence(ingredient_id);
+
+alter table public.ingredients enable row level security;
+alter table public.ingredient_evidence enable row level security;
+
+-- RLS: Read-only public access to verified scientific knowledge base
+drop policy if exists "Public read access for verified ingredients" on public.ingredients;
+create policy "Public read access for verified ingredients" on public.ingredients for select using (true);
+
+drop policy if exists "Public read access for ingredient evidence" on public.ingredient_evidence;
+create policy "Public read access for ingredient evidence" on public.ingredient_evidence for select using (true);
+

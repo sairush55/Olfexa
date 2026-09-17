@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:vision": "npx tsx scripts/test_vision_ocr_suite.js",
     "test:link": "npx tsx scripts/test_product_link_intelligence.ts",
-    "test:verification": "npx tsx scripts/test_user_verification.ts"
+    "test:verification": "npx tsx scripts/test_user_verification.ts",
+    "test:data": "npx tsx scripts/test_data_foundation.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

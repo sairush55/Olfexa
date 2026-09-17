@@ -28,6 +28,7 @@ import { FragranceFingerprintChart } from "@/components/results/FragranceFingerp
 import { GroundedAssistantDrawer } from "@/components/results/GroundedAssistantDrawer";
 import { ProvenanceCard } from "@/components/results/ProvenanceCard";
 import { SuitabilityProfileCard } from "@/components/results/SuitabilityProfileCard";
+import { RegionalComplianceCard } from "@/components/results/RegionalComplianceCard";
 import { generateSuitabilityProfile } from "@/lib/suitabilityEngine";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { formatDate } from "@/lib/utils";
@@ -289,6 +290,9 @@ export default function ResultsPage() {
           false
         )}
       />
+
+      {/* Regional Compliance & Labeling Intelligence */}
+      <RegionalComplianceCard scanResult={scanResult} />
 
       {/* Fragrance Composition Fingerprint */}
       <FragranceFingerprintChart

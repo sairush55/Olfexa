@@ -51,15 +51,26 @@ export function cleanRawOcrToken(raw: string): string {
     .replace(/\s+/g, " ");
 }
 
+// In-memory lookup cache for rapid repeated lookups
+const MATCH_CACHE = new Map<string, MatchedIngredientResult>();
+
+export function getMatchCacheSize(): number {
+  return MATCH_CACHE.size;
+}
+
+export function clearMatchCache(): void {
+  MATCH_CACHE.clear();
+}
+
 /**
- * Matches a single raw token through the multi-stage deterministic pipeline.
+ * Deterministic multi-stage matching logic (uncached internal resolver)
  */
-export function matchIngredientToken(rawToken: string): MatchedIngredientResult {
+function resolveIngredientToken(rawToken: string): MatchedIngredientResult {
   const cleaned = cleanRawOcrToken(rawToken);
   const upper = cleaned.toUpperCase();
 
   if (cleaned.length === 0) {
-    return {
+    const emptyRes: MatchedIngredientResult = {
       rawInput: rawToken,
       cleanedInput: "",
       classification: "UNKNOWN",
@@ -69,6 +80,8 @@ export function matchIngredientToken(rawToken: string): MatchedIngredientResult 
       matchStage: "UNMATCHED",
       matchNotes: "Empty ingredient token."
     };
+    MATCH_CACHE.set(rawToken, emptyRes);
+    return emptyRes;
   }
 
   // =========================================================================
@@ -196,6 +209,18 @@ export function matchIngredientToken(rawToken: string): MatchedIngredientResult 
     matchStage: "UNMATCHED",
     matchNotes: "Declared on packaging but not currently identified in verified scientific or regulatory repositories."
   };
+}
+
+/**
+ * Matches a single raw token through the multi-stage deterministic pipeline with in-memory caching.
+ */
+export function matchIngredientToken(rawToken: string): MatchedIngredientResult {
+  if (MATCH_CACHE.has(rawToken)) {
+    return MATCH_CACHE.get(rawToken)!;
+  }
+  const result = resolveIngredientToken(rawToken);
+  MATCH_CACHE.set(rawToken, result);
+  return result;
 }
 
 /**

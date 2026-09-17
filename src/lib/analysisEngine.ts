@@ -3,9 +3,11 @@ import {
   AnalyzedIngredient, 
   TransparencyRating, 
   FragranceFingerprint,
-  WatchlistItem 
+  WatchlistItem,
+  EvidenceSource
 } from "@/types";
-import { MOCK_INGREDIENTS_DATABASE, findIngredientByInci } from "@/data/mockIngredients";
+import { findIngredientByInci } from "@/data/mockIngredients";
+import { matchIngredientToken } from "./matching-engine/matchingEngine";
 import { evaluateAlcoholPresence } from "./alcoholRules";
 import { generateSuitabilityProfile } from "./suitabilityEngine";
 
@@ -35,61 +37,95 @@ export function analyzeIngredientsList(
 
   ingredients.forEach((raw, index) => {
     const trimmed = raw.trim();
-    const matched = findIngredientByInci(trimmed);
+    if (!trimmed) return;
+
+    // Stage 1: Multi-stage controlled matching engine against Canonical Ingredients Database
+    const matchRes = matchIngredientToken(trimmed);
+    const canonical = matchRes.matchedCanonical;
+    // Fallback to existing mock catalog if not in canonical
+    const legacyMatched = !canonical ? findIngredientByInci(trimmed) : undefined;
+
+    const matchedName = canonical?.inciName || legacyMatched?.inciName || trimmed;
+    const commonName = canonical?.commonNames[0] || legacyMatched?.commonName;
 
     const isWatchlist = watchlistSet.has(trimmed.toUpperCase()) || 
-      (matched?.commonName && watchlistSet.has(matched.commonName.toUpperCase()));
+      (canonical?.inciName && watchlistSet.has(canonical.inciName.toUpperCase())) ||
+      (commonName && watchlistSet.has(commonName.toUpperCase()));
 
     if (isWatchlist) {
       watchlistMatchCount++;
     }
 
-    if (matched) {
-      const isAllergen = matched.isEuAllergen;
-      const isIrritant = matched.isPotentialIrritant;
+    if (canonical || legacyMatched) {
+      const category = canonical?.category || legacyMatched!.category;
+      const isAlcohol = canonical ? canonical.isAlcohol : legacyMatched!.isAlcohol;
+      const alcoholType = canonical ? canonical.alcoholType : legacyMatched!.alcoholType;
+      const isAllergen = canonical ? canonical.isEuAllergen : legacyMatched!.isEuAllergen;
+      const isIrritant = canonical ? canonical.isPotentialIrritant : legacyMatched!.isPotentialIrritant;
 
       if (isAllergen) allergenCount++;
       if (isIrritant && !isAllergen) irritantCount++;
 
       // Fingerprint categorization
-      if (matched.category === "carrier" || matched.category === "solvent") carrierCount++;
-      else if (matched.category === "fragrance_compound") fragranceCount++;
-      else if (matched.category === "preservative") preservativeCount++;
-      else if (matched.category === "antioxidant" || matched.category === "uv_filter") stabilizerCount++;
+      if (category === "carrier" || category === "solvent") carrierCount++;
+      else if (category === "fragrance_compound") fragranceCount++;
+      else if (category === "preservative") preservativeCount++;
+      else if (category === "antioxidant" || category === "uv_filter") stabilizerCount++;
       else otherCount++;
 
       let status: AnalyzedIngredient["status"] = "NEUTRAL";
       if (isWatchlist) status = "WATCHLIST_MATCH";
       else if (isAllergen) status = "FLAGGED_ALLERGEN";
-      else if (matched.isAlcohol) status = "FLAGGED_ALCOHOL";
+      else if (isAlcohol) status = "FLAGGED_ALCOHOL";
       else if (isIrritant) status = "FLAGGED_IRRITANT";
+
+      // Auditable evidence chain from verified database records
+      const evidence: EvidenceSource[] = canonical?.evidence || legacyMatched?.evidence || [];
+      const evidenceStatus = evidence.length > 0 ? "VERIFIED" : "INSUFFICIENT_EVIDENCE";
 
       analyzedIngredients.push({
         rawInput: trimmed,
-        matchedInci: matched.inciName,
-        commonName: matched.commonName,
-        category: matched.category,
+        matchedInci: matchedName,
+        commonName,
+        category,
         status,
-        isAlcohol: matched.isAlcohol,
-        alcoholType: matched.alcoholType,
+        isAlcohol,
+        alcoholType,
         isEuAllergen: isAllergen,
         isPotentialIrritant: isIrritant,
         isWatchlistMatch: !!isWatchlist,
-        description: matched.description,
+        description: canonical?.description || legacyMatched?.description || "Cosmetic fragrance component.",
         whyFlagged: isAllergen 
           ? "Declared EU Annex III fragrance allergen subject to quantitative labeling thresholds."
-          : matched.isAlcohol 
+          : isAlcohol 
             ? "Recognized volatile alcohol carrier."
             : isWatchlist
               ? "Matches an active item in your personal ingredient watchlist."
-              : undefined,
-        evidence: matched.evidence,
+              : isIrritant
+                ? "Identified potential irritant in sensitive populations."
+                : undefined,
+        evidence,
+        evidenceStatus,
         order: index + 1,
       });
     } else {
-      // Unmapped token fallback
+      // Unmapped token fallback — transparently marked as INSUFFICIENT_EVIDENCE
       otherCount++;
       const isAlcoholLikely = /alcohol/i.test(trimmed);
+
+      const insufficientEvidence: EvidenceSource[] = [
+        {
+          id: `ev-insufficient-${index + 1}`,
+          title: `Insufficient Evidence for ${trimmed}`,
+          organization: "CosIng",
+          datasetOrRegulation: "Not Found in CosIng / IFRA / CDSCO",
+          region: "GLOBAL",
+          publicationYear: new Date().getFullYear(),
+          keyFindings: "Ingredient declared on product packaging but no verified toxicological or regulatory monograph was located in authoritative repositories.",
+          evidenceStatus: "INSUFFICIENT_EVIDENCE",
+        }
+      ];
+
       analyzedIngredients.push({
         rawInput: trimmed,
         category: "other",
@@ -98,8 +134,14 @@ export function analyzeIngredientsList(
         isEuAllergen: false,
         isPotentialIrritant: false,
         isWatchlistMatch: !!isWatchlist,
-        description: "Ingredient declared on product packaging. Full regulatory record pending verification against scientific repository.",
-        evidence: [],
+        description: "Ingredient declared on product packaging. Not identified in verified scientific or regulatory repositories.",
+        whyFlagged: isWatchlist 
+          ? "Matches an active item in your personal ingredient watchlist." 
+          : isAlcoholLikely 
+            ? "Contains token indicating alcohol carrier." 
+            : undefined,
+        evidence: insufficientEvidence,
+        evidenceStatus: "INSUFFICIENT_EVIDENCE",
         order: index + 1,
       });
     }

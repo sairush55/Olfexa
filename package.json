@@ -11,7 +11,8 @@
     "test:link": "npx tsx scripts/test_product_link_intelligence.ts",
     "test:verification": "npx tsx scripts/test_user_verification.ts",
     "test:data": "npx tsx scripts/test_data_foundation.ts",
-    "test:matching": "npx tsx scripts/test_matching_engine.ts"
+    "test:matching": "npx tsx scripts/test_matching_engine.ts",
+    "test:evidence": "npx tsx scripts/test_evidence_layer.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

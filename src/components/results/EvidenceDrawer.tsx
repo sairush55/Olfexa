@@ -3,6 +3,7 @@
 import React from "react";
 import { X, ExternalLink, BookOpen, ShieldCheck } from "lucide-react";
 import { EvidenceSource } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface EvidenceDrawerProps {
   isOpen: boolean;
@@ -63,45 +64,78 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
                 No indexed scientific monographs currently linked to this specific nomenclature token.
               </div>
             ) : (
-              evidence.map((source) => (
-                <div
-                  key={source.id}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-card-bg space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-medium uppercase tracking-wider">
-                      {source.organization}
-                    </span>
-                    {source.publicationYear && (
-                      <span className="text-[11px] font-mono text-slate-400">
-                        {source.publicationYear}
-                      </span>
+              evidence.map((source) => {
+                const isInsufficient = source.evidenceStatus === "INSUFFICIENT_EVIDENCE";
+
+                return (
+                  <div
+                    key={source.id}
+                    className={cn(
+                      "p-4 rounded-xl border bg-card-bg space-y-2 transition-colors",
+                      isInsufficient
+                        ? "border-amber-200 dark:border-amber-900/60 bg-amber-50/20"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={cn(
+                          "text-[10px] font-mono px-2 py-0.5 rounded font-medium uppercase tracking-wider",
+                          isInsufficient
+                            ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
+                            : "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                        )}>
+                          {source.organization}
+                        </span>
+
+                        {source.region && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold">
+                            {source.region}
+                          </span>
+                        )}
+
+                        {isInsufficient && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 font-bold uppercase tracking-wider">
+                            INSUFFICIENT EVIDENCE
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] font-mono text-slate-400">
+                        {source.effectiveDate ? `Eff: ${source.effectiveDate}` : (source.publicationYear ? `Pub: ${source.publicationYear}` : "")}
+                      </div>
+                    </div>
+
+                    {source.datasetOrRegulation && (
+                      <div className="text-[11px] font-mono text-slate-500 font-medium">
+                        Standard: {source.datasetOrRegulation}
+                      </div>
+                    )}
+
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                      {source.title}
+                    </h4>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pt-1">
+                      {source.keyFindings}
+                    </p>
+
+                    {source.citationUrl && (
+                      <div className="pt-2">
+                        <a
+                          href={source.citationUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 hover:underline font-medium"
+                        >
+                          <span>View Official Publication</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
                     )}
                   </div>
-
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                    {source.title}
-                  </h4>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pt-1">
-                    {source.keyFindings}
-                  </p>
-
-                  {source.citationUrl && (
-                    <div className="pt-2">
-                      <a
-                        href={source.citationUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 hover:underline font-medium"
-                      >
-                        <span>View Official Publication</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

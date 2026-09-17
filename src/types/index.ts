@@ -29,10 +29,14 @@ export type TransparencyRating = 'HIGH' | 'MODERATE' | 'LIMITED';
 export interface EvidenceSource {
   id: string;
   title: string;
-  organization: 'IFRA' | 'EU SCCS' | 'CIR' | 'PubMed' | 'FDA' | 'ECHA' | 'CosIng';
+  organization: 'IFRA' | 'EU SCCS' | 'CIR' | 'PubMed' | 'FDA' | 'ECHA' | 'CosIng' | 'CDSCO';
   citationUrl?: string;
   publicationYear?: number;
+  effectiveDate?: string;
+  datasetOrRegulation?: string;
+  region?: 'EU' | 'IN' | 'US' | 'GLOBAL';
   keyFindings: string;
+  evidenceStatus?: 'VERIFIED' | 'INSUFFICIENT_EVIDENCE';
 }
 
 export interface Ingredient {
@@ -73,6 +77,7 @@ export interface AnalyzedIngredient {
   description: string;
   whyFlagged?: string;
   evidence: EvidenceSource[];
+  evidenceStatus?: 'VERIFIED' | 'INSUFFICIENT_EVIDENCE';
   order: number;
 }
 

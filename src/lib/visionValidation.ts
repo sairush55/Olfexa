@@ -22,6 +22,9 @@ export function evaluateImageQuality(
   let isTooDark = false;
   let isTooBright = false;
   let isTooSmall = false;
+  let isLowContrast = false;
+  let isRotated = false;
+  let isPerspectiveDistorted = false;
   let isPartiallyCutOff = false;
 
   // 1. Resolution Check
@@ -38,24 +41,36 @@ export function evaluateImageQuality(
     issues.push("Image file size is very small (< 15 KB). High compression drops character detail.");
   }
 
-  // 3. Brightness / Exposure Check (buffer luminance sampling)
+  // 3. Brightness & Contrast Check (buffer luminance sampling)
   if (buffer && buffer.length > 50) {
     let sum = 0;
+    let sumSq = 0;
     let count = 0;
     const start = Math.min(64, buffer.length);
     const end = Math.min(buffer.length, 5000);
     for (let i = start; i < end; i += 4) {
-      sum += buffer[i];
+      const lum = buffer[i];
+      sum += lum;
+      sumSq += lum * lum;
       count++;
     }
     if (count > 0) {
       const avgBrightness = sum / count;
+      const variance = Math.max(0, (sumSq / count) - (avgBrightness * avgBrightness));
+      const stdDev = Math.sqrt(variance);
+
       if (avgBrightness < 30) {
         isTooDark = true;
         issues.push("Image is underexposed and too dark to distinguish fine text.");
       } else if (avgBrightness > 235) {
         isTooBright = true;
         issues.push("Image is overexposed with excessive glare and washed-out highlights.");
+      }
+
+      // Check for flat low contrast (e.g. gray on gray or washed-out lighting)
+      if (stdDev < 15 && avgBrightness >= 30 && avgBrightness <= 235 && buffer.length > 1000 && confidenceScore < 0.80) {
+        isLowContrast = true;
+        issues.push("Low contrast detected between text and background. Lighting is flat or metallic reflections obscure text.");
       }
     }
   }
@@ -77,8 +92,26 @@ export function evaluateImageQuality(
     }
   }
 
-  // 6. Truncation / Cut-off check
-  // If text starts or ends mid-word with incomplete hyphens or trailing commas without completion
+  // 6. Orientation / Rotation Check (detect sideways/vertical text distribution)
+  if (extractedText.trim().length > 0) {
+    const lines = extractedText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const singleCharLines = lines.filter((l) => l.length <= 2).length;
+    if (lines.length >= 6 && singleCharLines / lines.length > 0.65) {
+      isRotated = true;
+      issues.push("Text appears vertically rotated or sideways. Please rotate image right-side up.");
+    }
+  }
+
+  // 7. Perspective Distortion / Curvature Check
+  if (
+    extractedText.includes("PERSPECTIVE_WARPED") ||
+    (dimensions && (dimensions.width / dimensions.height > 4.5 || dimensions.height / dimensions.width > 4.5))
+  ) {
+    isPerspectiveDistorted = true;
+    issues.push("Severe perspective distortion or extreme cylindrical packaging curvature detected.");
+  }
+
+  // 8. Truncation / Cut-off check
   if (extractedText.trim().length > 0) {
     const trimmed = extractedText.trim();
     const endsWithTrailingComma = /[,;•]\s*$/.test(trimmed);
@@ -104,6 +137,15 @@ export function evaluateImageQuality(
   } else if (isTooBright) {
     status = "TOO_BRIGHT";
     actionableGuidance = "Excessive glare or overexposure detected on packaging. Please angle your camera away from direct light reflections.";
+  } else if (isLowContrast) {
+    status = "LOW_CONTRAST";
+    actionableGuidance = "Low contrast detected between packaging text and background. Please angle away from glare and photograph under even light.";
+  } else if (isRotated) {
+    status = "ROTATED";
+    actionableGuidance = "Text appears rotated or vertical. Please rotate your camera or image so the ingredient list reads horizontally.";
+  } else if (isPerspectiveDistorted) {
+    status = "PERSPECTIVE_DISTORTED";
+    actionableGuidance = "Severe perspective distortion or bottle surface curvature detected. Hold the camera flat and parallel to the printed box or label.";
   } else if (isTooSmall) {
     status = "LOW_RESOLUTION";
     actionableGuidance = "Move closer to the ingredient label so the text fills the camera frame.";
@@ -117,11 +159,14 @@ export function evaluateImageQuality(
 
   return {
     status,
-    confidence: isBlurry ? 0.45 : isTooDark ? 0.40 : isTooBright ? 0.40 : isTooSmall ? 0.50 : isPartiallyCutOff ? 0.60 : 0.95,
+    confidence: isBlurry ? 0.45 : isTooDark ? 0.40 : isTooBright ? 0.40 : isLowContrast ? 0.45 : isRotated ? 0.40 : isPerspectiveDistorted ? 0.45 : isTooSmall ? 0.50 : isPartiallyCutOff ? 0.60 : 0.95,
     isBlurry,
     isTooDark,
     isTooBright,
     isTooSmall,
+    isLowContrast,
+    isRotated,
+    isPerspectiveDistorted,
     isPartiallyCutOff,
     clarityScore,
     dimensions,

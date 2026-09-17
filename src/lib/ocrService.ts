@@ -1037,6 +1037,9 @@ export function evaluateVisionOcrPipeline(
   if (hasExplicitWrongProduct) {
     status = "REJECTED_WRONG_PRODUCT";
     message = productValidation.rationale;
+  } else if (imageQuality.status === "LOW_RESOLUTION") {
+    status = "IMAGE_TOO_SMALL";
+    message = imageQuality.actionableGuidance;
   } else if (imageQuality.status === "BLURRY") {
     status = "IMAGE_TOO_BLURRY";
     message = imageQuality.actionableGuidance;
@@ -1046,8 +1049,14 @@ export function evaluateVisionOcrPipeline(
   } else if (imageQuality.status === "TOO_BRIGHT") {
     status = "IMAGE_TOO_BRIGHT";
     message = imageQuality.actionableGuidance;
-  } else if (imageQuality.status === "LOW_RESOLUTION") {
-    status = "IMAGE_TOO_SMALL";
+  } else if (imageQuality.status === "LOW_CONTRAST") {
+    status = "IMAGE_LOW_CONTRAST";
+    message = imageQuality.actionableGuidance;
+  } else if (imageQuality.status === "ROTATED") {
+    status = "IMAGE_ROTATED";
+    message = imageQuality.actionableGuidance;
+  } else if (imageQuality.status === "PERSPECTIVE_DISTORTED") {
+    status = "IMAGE_PERSPECTIVE_DISTORTED";
     message = imageQuality.actionableGuidance;
   } else if (!productValidation.isFragranceProduct && productValidation.productType !== "cosmetic_label") {
     status = "REJECTED_WRONG_PRODUCT";

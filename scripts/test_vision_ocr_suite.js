@@ -298,10 +298,79 @@ async function runSuite() {
   }
 
   // -------------------------------------------------------------------------
+  // Case M: Rotated label (vertical text orientation) -> rejected with rotation guidance
+  // -------------------------------------------------------------------------
+  {
+    const rotatedText = "I\nN\nG\nR\nE\nD\nI\nE\nN\nT\nS\n:\nA\nL\nC\nO\nH\nO\nL";
+    const result = evaluateVisionOcrPipeline(rotatedText, 0.85);
+
+    const ok = result.status === "IMAGE_ROTATED" &&
+               result.imageQuality.isRotated === true &&
+               result.imageQuality.actionableGuidance.toLowerCase().includes("rotate");
+    assertTest("M", "Rotated label -> Rejected with rotation guidance", ok,
+      `Status: ${result.status}, isRotated: ${result.imageQuality.isRotated}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Case N: Perspective-distorted label -> rejected with perspective advice
+  // -------------------------------------------------------------------------
+  {
+    const warpedText = "INGREDIENTS: ALCOHOL DENAT., AQUA, PARFUM PERSPECTIVE_WARPED";
+    const result = evaluateVisionOcrPipeline(warpedText, 0.85);
+
+    const ok = result.status === "IMAGE_PERSPECTIVE_DISTORTED" &&
+               result.imageQuality.isPerspectiveDistorted === true &&
+               result.imageQuality.actionableGuidance.toLowerCase().includes("perspective");
+    assertTest("N", "Perspective-distorted label -> Rejected with perspective guidance", ok,
+      `Status: ${result.status}, isDistorted: ${result.imageQuality.isPerspectiveDistorted}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Case O: Long ingredient list (25+ ingredients) -> full extraction without truncation
+  // -------------------------------------------------------------------------
+  {
+    const longText = "INGREDIENTS: ALCOHOL DENAT., AQUA / WATER / EAU, PARFUM / FRAGRANCE, LIMONENE, LINALOOL, COUMARIN, CITRONELLOL, GERANIOL, CITRAL, EUGENOL, FARNESOL, BENZYL BENZOATE, BENZYL SALICYLATE, BENZYL ALCOHOL, HEXYL CINNAMAL, HYDROXYCITRONELLAL, ALPHA-ISOMETHYL IONONE, CINNAMAL, CINNAMYL ALCOHOL, BHT, TOCOPHEROL, ETHYLHEXYL METHOXYCINNAMATE, BUTYL METHOXYDIBENZOYLMETHANE, ETHYLHEXYL SALICYLATE, DIPROPYLENE GLYCOL, CI 19140, CI 14700.";
+    const result = evaluateVisionOcrPipeline(longText, 0.95);
+
+    const extractedCount = result.ingredients.length;
+    const ok = result.status === "READY_FOR_REVIEW" && extractedCount >= 25;
+    assertTest("O", "Long ingredient list (25+ items) -> Completely extracted without truncation", ok,
+      `Status: ${result.status}, Extracted count: ${extractedCount}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Case P: Non-ingredient packaging text -> Isolated from ingredient tokens
+  // -------------------------------------------------------------------------
+  {
+    const fullBoxText = `
+      CHANEL PARIS
+      CHANCE EAU TENDRE
+      EAU DE PARFUM 100 ML - 3.4 FL. OZ. 80% VOL.
+      INGREDIENTS: ALCOHOL, PARFUM (FRAGRANCE), AQUA (WATER), LIMONENE, LINALOOL, CITRONELLOL, GERANIOL, BHT.
+      MADE IN FRANCE
+      CHANEL 92200 NEUILLY SUR SEINE
+      FLAMMABLE: KEEP AWAY FROM HEAT OR FLAME.
+      REF. 126260
+    `;
+    const result = evaluateVisionOcrPipeline(fullBoxText, 0.95);
+
+    const ingNames = result.ingredients.map((i) => i.name);
+    const hasOnlyIngredients = !ingNames.includes("CHANEL PARIS") &&
+                               !ingNames.includes("MADE IN FRANCE") &&
+                               !ingNames.includes("FLAMMABLE");
+    const mfgIsolated = result.companyDetails?.manufacturer !== undefined || result.companyAddress?.countryOfOrigin === "France";
+    const othersIsolated = result.others?.volume !== undefined || result.others?.alcoholVol !== undefined;
+
+    const ok = hasOnlyIngredients && (mfgIsolated || othersIsolated);
+    assertTest("P", "Non-ingredient packaging text (Brand, Origin, Vol, Warnings) -> Successfully isolated", ok,
+      `Ingredients: ${ingNames.length}, Manufacturer: ${result.companyDetails?.manufacturer}, Origin: ${result.companyAddress?.countryOfOrigin}`);
+  }
+
+  // -------------------------------------------------------------------------
   // Summary
   // -------------------------------------------------------------------------
   console.log("\n================================================================================");
-  console.log(`TEST RESULTS: ${passed} / 12 PASSED (${failed} FAILED)`);
+  console.log(`TEST RESULTS: ${passed} / 16 PASSED (${failed} FAILED)`);
   console.log("================================================================================\n");
 
   if (failed > 0) {

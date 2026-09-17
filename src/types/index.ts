@@ -222,6 +222,9 @@ export type VisionOcrStatus =
   | "IMAGE_TOO_DARK"
   | "IMAGE_TOO_BRIGHT"
   | "IMAGE_TOO_SMALL"
+  | "IMAGE_LOW_CONTRAST"
+  | "IMAGE_ROTATED"
+  | "IMAGE_PERSPECTIVE_DISTORTED"
   | "INGREDIENT_LIST_NOT_VISIBLE"
   | "INGREDIENT_LIST_PARTIALLY_VISIBLE"
   | "OCR_LOW_CONFIDENCE"
@@ -252,12 +255,15 @@ export interface ProductValidationResult {
 }
 
 export interface ImageQualityEvaluation {
-  status: "GOOD" | "BLURRY" | "TOO_DARK" | "TOO_BRIGHT" | "LOW_RESOLUTION" | "PARTIALLY_CUT_OFF" | "UNREADABLE";
+  status: "GOOD" | "BLURRY" | "TOO_DARK" | "TOO_BRIGHT" | "LOW_RESOLUTION" | "LOW_CONTRAST" | "ROTATED" | "PERSPECTIVE_DISTORTED" | "PARTIALLY_CUT_OFF" | "UNREADABLE";
   confidence: number;
   isBlurry: boolean;
   isTooDark: boolean;
   isTooBright: boolean;
   isTooSmall: boolean;
+  isLowContrast?: boolean;
+  isRotated?: boolean;
+  isPerspectiveDistorted?: boolean;
   isPartiallyCutOff: boolean;
   clarityScore: number; // 0 - 100
   dimensions?: { width: number; height: number };

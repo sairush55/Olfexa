@@ -57,7 +57,7 @@ export default function DashboardPage() {
     };
   }, [user?.id]);
 
-  const totalIngredientsAnalyzed = scans.reduce((acc, curr) => acc + (curr.allergenCount + 6), 0);
+  const totalFlaggedSubstances = scans.reduce((acc, curr) => acc + (curr.allergenCount || 0) + (curr.irritantCount || 0), 0);
   const totalWatchlistHits = scans.reduce((acc, curr) => acc + curr.watchlistMatchCount, 0);
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null;
 
@@ -110,13 +110,13 @@ export default function DashboardPage() {
 
         <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-card-bg shadow-xs">
           <span className="text-[11px] font-mono uppercase tracking-wider text-slate-500 block mb-2">
-            Ingredients Cross-Referenced
+            Flagged Substances
           </span>
           <div className="text-3xl font-bold font-editorial-heading text-slate-900 dark:text-slate-100">
-            {totalIngredientsAnalyzed}
+            {totalFlaggedSubstances}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
-            Evaluated against IFRA & EU cosmetic standards
+            Allergens & irritants detected across library
           </p>
         </div>
 

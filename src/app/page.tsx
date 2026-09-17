@@ -393,39 +393,6 @@ export default function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 5 — PERSONALIZATION                                               */}
-      {/* ========================================================================= */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="p-6 sm:p-8 rounded-3xl border border-purple-200/70 dark:border-purple-900/50 bg-gradient-to-br from-card-bg via-purple-50/20 to-card-bg dark:from-card-bg dark:via-purple-950/20 dark:to-card-bg shadow-xs flex flex-col sm:flex-row items-center justify-between gap-6">
-          
-          <div className="space-y-1.5 text-center sm:text-left">
-            <div className="inline-flex items-center gap-1.5 text-purple-700 dark:text-purple-400 text-xs font-mono font-medium">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Personal Fragrance Exploration</span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-bold font-editorial-heading text-slate-950 dark:text-white">
-              Find your fragrance persona.
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-lg">
-              Explore scent styles based on your preferences and optional zodiac-inspired recommendations.
-            </p>
-            <p className="text-[11px] text-slate-400 font-mono pt-1">
-              *Zodiac recommendations are for entertainment and fragrance discovery.
-            </p>
-          </div>
-
-          <Link
-            href="/results/demo"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all shrink-0"
-          >
-            <span>Discover Your Fragrance Persona</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
       {/* FINAL CTA                                                                 */}
       {/* ========================================================================= */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">

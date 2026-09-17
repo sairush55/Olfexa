@@ -28,7 +28,6 @@ import { FragranceFingerprintChart } from "@/components/results/FragranceFingerp
 import { GroundedAssistantDrawer } from "@/components/results/GroundedAssistantDrawer";
 import { ProvenanceCard } from "@/components/results/ProvenanceCard";
 import { SuitabilityProfileCard } from "@/components/results/SuitabilityProfileCard";
-import { FragrancePersonaCard } from "@/components/results/FragrancePersonaCard";
 import { generateSuitabilityProfile } from "@/lib/suitabilityEngine";
 import { DisclaimerBanner } from "@/components/brand/DisclaimerBanner";
 import { formatDate } from "@/lib/utils";
@@ -295,12 +294,6 @@ export default function ResultsPage() {
       <FragranceFingerprintChart
         fingerprint={scanResult.fragranceFingerprint}
         perfumeName={scanResult.perfumeName}
-      />
-
-      {/* Recreational Fragrance Persona & Astrological Discovery */}
-      <FragrancePersonaCard
-        initialPersona={scanResult.fragrancePersona}
-        allIngredients={scanResult.ingredientsFound.map((i) => i.matchedInci || i.rawInput)}
       />
 
       {/* Ingredient Breakdown Section */}

@@ -7,7 +7,6 @@ import { evaluateVisionOcrPipeline, parseIngredientsWithConfidence } from "../sr
 import { evaluateImageQuality, validateProductImage, detectIngredientListVisibility } from "../src/lib/visionValidation";
 import { generateSuitabilityProfile } from "../src/lib/suitabilityEngine";
 import { analyzeIngredientsList } from "../src/lib/analysisEngine";
-import { generateFragrancePersona } from "../src/lib/fragrancePersona";
 
 // Helper to construct synthetic test PNG image buffers with specified dimensions and byte values
 function createSyntheticPngBuffer(width, height, fillByte = 128) {

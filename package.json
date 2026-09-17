@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:vision": "npx tsx scripts/test_vision_ocr_suite.js",
-    "test:link": "npx tsx scripts/test_product_link_intelligence.ts",
-    "test:zodiac": "npx tsx scripts/test_zodiac_attar_matching.js"
+    "test:link": "npx tsx scripts/test_product_link_intelligence.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

@@ -210,7 +210,6 @@ export interface AnalysisResult {
   imageQuality?: ImageQualityAssessment;
   relevance?: ProductRelevanceAssessment;
   suitabilityProfile?: SuitabilityProfile;
-  fragrancePersona?: FragrancePersona;
 }
 
 // ==============================================================================
@@ -338,31 +337,6 @@ export interface SuitabilityProfile {
   unknownIngredientsCount: number;
 }
 
-// ==============================================================================
-// 3. FRAGRANCE PERSONA (Strictly Entertainment / Discovery Personalization)
-// ==============================================================================
-
-export interface FragrancePersona {
-  zodiacSign?: string;
-  symbol?: string;
-  dateRange?: string;
-  personaTraits?: string[];
-  description?: string;
-  scentFamilies: string[];
-  secondaryFamilies?: string[];
-  vibe: string;
-  intensityPreference: "subtle" | "moderate" | "projective" | "intense";
-  attarIntensity?: "Soft" | "Moderate" | "Strong";
-  suggestedOccasions: string[];
-  attarRecommendation?: string;
-  attarProfile?: string[];
-  attarDescription?: string;
-  perfumeRecommendation?: string;
-  selectedFamily?: string | null;
-  isFallback?: boolean;
-  fallbackMessage?: string;
-  disclaimer: string;
-}
 
 export interface WatchlistItem {
   id: string;

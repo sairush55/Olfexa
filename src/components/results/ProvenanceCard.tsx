@@ -55,7 +55,7 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-editorial-heading">
-                {isPerfume ? "Verified Perfume Packaging Dossier" : "Unverified Fragrance Packaging"}
+                {isPerfume ? "Detected Packaging Details" : "Unverified Packaging Details"}
               </h3>
               <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase ${
                 isPerfume
@@ -82,7 +82,7 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
         <div className="flex items-center gap-2">
           <PackageCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span className="text-slate-600 dark:text-slate-300">
-            System Status: <strong className="text-slate-900 dark:text-white">{provenance.relevance?.classificationName || "Verified Fragrance Product / Ingredient Label"}</strong>
+            System Status: <strong className="text-slate-900 dark:text-white">{provenance.relevance?.classificationName || "Fragrance Packaging Label"}</strong>
           </span>
         </div>
         <div className="flex items-center gap-3 text-slate-500">

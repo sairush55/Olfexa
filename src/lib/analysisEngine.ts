@@ -8,7 +8,6 @@ import {
 import { MOCK_INGREDIENTS_DATABASE, findIngredientByInci } from "@/data/mockIngredients";
 import { evaluateAlcoholPresence } from "./alcoholRules";
 import { generateSuitabilityProfile } from "./suitabilityEngine";
-import { generateFragrancePersona } from "./fragrancePersona";
 
 export function analyzeIngredientsList(
   ingredients: string[],
@@ -139,9 +138,6 @@ export function analyzeIngredientsList(
     false
   );
 
-  // Optional Fragrance Persona for discovery/entertainment
-  const fragrancePersona = generateFragrancePersona();
-
   return {
     id: `scan-${Date.now()}`,
     perfumeName,
@@ -159,7 +155,6 @@ export function analyzeIngredientsList(
     transparencyNotes,
     fragranceFingerprint: fingerprint,
     suitabilityProfile,
-    fragrancePersona,
     disclaimer: "OLFEXA provides ingredient-level evidence and informational classifications based on visible packaging labels. It does not replace professional dermatological or medical evaluation.",
   };
 }

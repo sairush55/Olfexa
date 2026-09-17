@@ -987,15 +987,15 @@ export function parseIngredientsWithConfidence(text: string): {
     } else if (isExact && dist === 0) {
       confidence = 0.98;
       needsReview = false;
-    } else if (isExact && dist <= 1) {
-      confidence = 0.90;
-      needsReview = false;
+    } else if (dist === 1) {
+      confidence = 0.82;
+      needsReview = true;
     } else if (dist <= 2) {
-      confidence = 0.75;
+      confidence = 0.72;
       needsReview = true;
     } else {
       // Ingredient declared on packaging but unlisted in knowledge base
-      confidence = 0.70;
+      confidence = 0.65;
       needsReview = true;
     }
 

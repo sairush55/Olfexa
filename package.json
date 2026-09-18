@@ -18,7 +18,8 @@
     "test:features": "npx tsx scripts/test_user_features_suite.ts",
     "test:regional": "npx tsx scripts/test_regional_intelligence_suite.ts",
     "test:security": "npx tsx scripts/test_security_perf_offline.ts",
-    "test:ux": "npx tsx scripts/test_ux_disclaimers_polish.ts"
+    "test:ux": "npx tsx scripts/test_ux_disclaimers_polish.ts",
+    "test:e2e": "npx tsx scripts/test_e2e_pipeline.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
